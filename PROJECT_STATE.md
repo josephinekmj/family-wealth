@@ -6,8 +6,8 @@ Phase 2 - Savings domain
 
 ## Current increment
 
-Add in-memory SavingsGoalRepository and application integration tests to prove
-the persistence boundary before introducing SQLite.
+Expose read-only savings goals through GET /api/goals using existing
+application query abstractions.
 
 ## Completed
 
@@ -26,13 +26,15 @@ the persistence boundary before introducing SQLite.
 - Added InMemorySavingsGoalRepository in src/application/in-memory-savings-goal-repository.ts.
 - Added listSavingsGoals use case in src/application/savings-goal-queries.ts.
 - Added repository behavior tests and application integration tests.
+- Added GET /api/goals route in Fastify using SavingsGoalQueries.
+- Added server composition wiring with in-memory repository and demo seed data.
+- Added API tests for status, response shape, seeded payload, and date serialization.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Commit and push this in-memory repository increment to origin.
-- Start next small increment in Phase 2: add an application command/use case
-  for creating or updating a savings goal through the repository interface.
+- Commit and push this read-only API increment to origin.
+- Start next small increment: React frontend reads and displays GET /api/goals.
 
 ## Known issues
 
