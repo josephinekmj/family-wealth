@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 3 - Minimal UI
+Phase 4 - Persistence
 
 ## Current increment
 
-Browser edit flow for existing savings goals.
+Persistent SQLite SavingsGoalRepository.
 
 ## Completed
 
@@ -41,27 +41,33 @@ Browser edit flow for existing savings goals.
 - Added frontend PUT client for existing savings goals.
 - Added an edit form with explicit number, percentage, and UTC date conversion.
 - Added save-through-PUT followed by GET refetch before updating the displayed state.
+- Added a node:sqlite repository adapter with deterministic schema initialization.
+- Wired one shared runtime SQLite repository to savings-goal queries and commands.
+- Added one-time generic demo seeding for a newly created database.
+- Verified savings-goal persistence across a complete backend restart.
+- Added isolated SQLite repository contract tests using in-memory databases.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Add a persistent SQLite SavingsGoalRepository while preserving the existing repository interface.
+- Review the SQLite persistence design and node:sqlite maturity before selecting the next product increment.
 
 ## Known issues
 
-- Repository storage is process-memory only and resets on restart.
 - Frontend editing is limited to existing demo goals.
-- Saved data is not persisted across server restarts.
 - Goals cannot be created or deleted from the browser yet.
+- Persistence uses one local SQLite database and has no backup strategy yet.
 
 ## Architecture decisions
 
 - Keep a single modular monolith in one public repository.
 - Keep domain layer independent from framework and infrastructure code.
 - Use PUT /api/goals/:id for idempotent full-record upserts with the ID sourced only from the URL.
+- Keep SQLite behind SavingsGoalRepository and share one runtime adapter instance across reads and writes.
 
 ## Security decisions
 
 - SAXO secrets are backend-only and excluded from git via .env patterns.
 - No financial write capability is introduced in this phase.
 - HTTP goal writes are limited to validated local planning data and expose no internal errors.
+- Keep the local database and all SQLite sidecar files outside Git through the ignored .data directory.

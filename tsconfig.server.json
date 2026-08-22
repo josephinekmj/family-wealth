@@ -10,6 +10,12 @@
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["src/server/**/*.ts", "src/domain/**/*.ts", "src/application/**/*.ts", "src/saxo/**/*.ts"],
+  "include": [
+    "src/server/**/*.ts",
+    "src/domain/**/*.ts",
+    "src/application/**/*.ts",
+    "src/infrastructure/**/*.ts",
+    "src/saxo/**/*.ts"
+  ],
   "exclude": ["src/web", "tests"]
 }

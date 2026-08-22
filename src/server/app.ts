@@ -6,6 +6,7 @@ import {
   mapRecordToSavingsGoalProfile,
   mapSavingsGoalProfileToRecord,
   type SavingsGoalRecord,
+  type SavingsGoalRepository,
 } from "../application/index.js";
 import { DEMO_SAVINGS_GOALS } from "./demo-savings-goals.js";
 
@@ -24,7 +25,11 @@ const savingsGoalBodySchema = {
   },
 } as const;
 
-export function buildServer() {
+export type BuildServerDependencies = {
+  savingsGoalRepository?: SavingsGoalRepository;
+};
+
+export function buildServer(dependencies: BuildServerDependencies = {}) {
   const app = Fastify({
     logger: false,
     ajv: {
@@ -34,7 +39,8 @@ export function buildServer() {
       },
     },
   });
-  const savingsGoalRepository = new InMemorySavingsGoalRepository(DEMO_SAVINGS_GOALS);
+  const savingsGoalRepository =
+    dependencies.savingsGoalRepository ?? new InMemorySavingsGoalRepository(DEMO_SAVINGS_GOALS);
   const savingsGoalQueries = createSavingsGoalQueries(savingsGoalRepository);
   const savingsGoalCommands = createSavingsGoalCommands(savingsGoalRepository);
 
