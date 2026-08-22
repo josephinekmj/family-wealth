@@ -11,6 +11,9 @@ import type { SavingsProjection } from "../domain/savings-projection.js";
 export type SavingsGoalProjectionView =
   { status: "available"; projection: SavingsProjection } | { status: "unavailable" };
 
+export type CombinedSavingsProjectionView =
+  { status: "available"; requiredMonthlyContribution: number } | { status: "unavailable" };
+
 const projectionService = createSavingsProjectionService();
 
 export function mapSavingsGoalRecordToProjectionRequest(
@@ -46,4 +49,23 @@ export function getSavingsGoalProjection(
 
     throw error;
   }
+}
+
+export function getCombinedSavingsProjection(
+  records: SavingsGoalRecord[],
+  asOfDate: Date = new Date(),
+): CombinedSavingsProjectionView {
+  let requiredMonthlyContribution = 0;
+
+  for (const record of records) {
+    const result = getSavingsGoalProjection(record, asOfDate);
+
+    if (result.status === "unavailable") {
+      return { status: "unavailable" };
+    }
+
+    requiredMonthlyContribution += result.projection.requiredMonthlyContribution;
+  }
+
+  return { status: "available", requiredMonthlyContribution };
 }

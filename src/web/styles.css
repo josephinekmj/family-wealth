@@ -34,6 +34,39 @@ h1 {
   margin-bottom: 0.75rem;
 }
 
+.combined-summary {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+  color: #fff;
+  background: #78350f;
+}
+
+.combined-summary h2,
+.combined-summary p {
+  margin: 0;
+}
+
+.combined-summary h2 {
+  font-size: 1rem;
+}
+
+.combined-value {
+  padding: 0.25rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.combined-unavailable {
+  padding: 0.5rem 0;
+  font-weight: 600;
+}
+
+.combined-explanation {
+  color: #fef3c7;
+  font-size: 0.9rem;
+}
+
 .goals-list {
   display: grid;
   gap: 1rem;

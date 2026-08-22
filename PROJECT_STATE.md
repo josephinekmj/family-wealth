@@ -6,7 +6,7 @@ Phase 3 - Minimal UI
 
 ## Current increment
 
-Display derived savings projections for existing goals.
+Display the combined monthly savings requirement.
 
 ## Completed
 
@@ -49,11 +49,14 @@ Display derived savings projections for existing goals.
 - Added derived savings projections to each projectable goal in the browser.
 - Reused the existing application projection service without persisting calculated values.
 - Added a safe per-goal unavailable state for rejected projections.
+- Added a combined monthly savings summary across all projectable goals.
+- Made the combined value all-or-nothing when any goal is unavailable.
+- Used one shared as-of date for the combined and per-goal projections in each render.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Review the projection UI and choose one next increment based on user value.
+- Add creation of a new savings goal through the existing PUT contract.
 
 ## Known issues
 
@@ -67,6 +70,7 @@ Display derived savings projections for existing goals.
 - Keep domain layer independent from framework and infrastructure code.
 - Use PUT /api/goals/:id for idempotent full-record upserts with the ID sourced only from the URL.
 - Keep SQLite behind SavingsGoalRepository and share one runtime adapter instance across reads and writes.
+- Keep combined savings requirements derived from existing projections and never persist them.
 
 ## Security decisions
 
