@@ -15,9 +15,9 @@ export type SavingsGoalRecord = {
 };
 
 export interface SavingsGoalRepository {
-  findAll(): Promise<SavingsGoalRecord[]>;
-  findById(id: string): Promise<SavingsGoalRecord | null>;
-  save(record: SavingsGoalRecord): Promise<void>;
+  findAll(): Promise<SavingsGoalProfile[]>;
+  findById(id: string): Promise<SavingsGoalProfile | null>;
+  save(goal: SavingsGoalProfile): Promise<void>;
 }
 
 export function mapRecordToSavingsGoalProfile(

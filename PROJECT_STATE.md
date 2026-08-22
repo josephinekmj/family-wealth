@@ -6,8 +6,8 @@ Phase 2 - Savings domain
 
 ## Current increment
 
-Define SavingsGoal application contracts and mapping boundaries ahead of
-persistence.
+Add in-memory SavingsGoalRepository and application integration tests to prove
+the persistence boundary before introducing SQLite.
 
 ## Completed
 
@@ -23,17 +23,20 @@ persistence.
 - Added application unit tests in tests/savings-projection-service.test.ts.
 - Added contracts and repository interface in src/application/savings-goal-contracts.ts.
 - Added mapping tests in tests/savings-goal-contracts.test.ts.
+- Added InMemorySavingsGoalRepository in src/application/in-memory-savings-goal-repository.ts.
+- Added listSavingsGoals use case in src/application/savings-goal-queries.ts.
+- Added repository behavior tests and application integration tests.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Commit and push this contracts increment to origin.
-- Start next small increment in Phase 2: add in-memory SavingsGoalRepository
-  adapter for application-level integration tests before SQLite.
+- Commit and push this in-memory repository increment to origin.
+- Start next small increment in Phase 2: add an application command/use case
+  for creating or updating a savings goal through the repository interface.
 
 ## Known issues
 
-- None.
+- Repository storage is process-memory only and resets on restart.
 
 ## Architecture decisions
 
