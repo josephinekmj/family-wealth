@@ -6,6 +6,7 @@ import {
   updateSavingsGoal,
   type SavingsGoalUpdate,
 } from "./client/savings-goals.js";
+import { getSavingsGoalProjection } from "./savings-goal-projection.js";
 
 type ViewState =
   { status: "loading" } | { status: "error" } | { status: "success"; goals: SavingsGoalRecord[] };
@@ -81,44 +82,69 @@ export default function App() {
 
     return (
       <div className="goals-list" aria-label="Savings goals">
-        {viewState.goals.map((goal) => (
-          <article key={goal.id} className="goal-card">
-            {editingGoalId === goal.id ? (
-              <SavingsGoalEditForm
-                goal={goal}
-                isSaving={isSaving}
-                saveError={saveError}
-                onSave={(update) => void saveGoal(goal.id, update)}
-                onCancel={cancelEditing}
-              />
-            ) : (
-              <>
-                <h2>{goal.name}</h2>
-                <dl>
-                  <div>
-                    <dt>Target</dt>
-                    <dd>{formatCurrency(goal.targetAmount)}</dd>
-                  </div>
-                  <div>
-                    <dt>Saved</dt>
-                    <dd>{formatCurrency(goal.currentAmount)}</dd>
-                  </div>
-                  <div>
-                    <dt>Target date</dt>
-                    <dd>{formatDate(goal.targetDate)}</dd>
-                  </div>
-                  <div>
-                    <dt>Expected return</dt>
-                    <dd>{formatPercent(goal.expectedAnnualReturn)}</dd>
-                  </div>
-                </dl>
-                <button type="button" onClick={() => startEditing(goal.id)}>
-                  Edit
-                </button>
-              </>
-            )}
-          </article>
-        ))}
+        {viewState.goals.map((goal) => {
+          const projection = getSavingsGoalProjection(goal);
+
+          return (
+            <article key={goal.id} className="goal-card">
+              {editingGoalId === goal.id ? (
+                <SavingsGoalEditForm
+                  goal={goal}
+                  isSaving={isSaving}
+                  saveError={saveError}
+                  onSave={(update) => void saveGoal(goal.id, update)}
+                  onCancel={cancelEditing}
+                />
+              ) : (
+                <>
+                  <h2>{goal.name}</h2>
+                  <dl>
+                    <div>
+                      <dt>Target</dt>
+                      <dd>{formatCurrency(goal.targetAmount)}</dd>
+                    </div>
+                    <div>
+                      <dt>Saved</dt>
+                      <dd>{formatCurrency(goal.currentAmount)}</dd>
+                    </div>
+                    <div>
+                      <dt>Target date</dt>
+                      <dd>{formatDate(goal.targetDate)}</dd>
+                    </div>
+                    <div>
+                      <dt>Expected return</dt>
+                      <dd>{formatPercent(goal.expectedAnnualReturn)}</dd>
+                    </div>
+                    {projection.status === "available" && (
+                      <>
+                        <div className="primary-projection">
+                          <dt>Required monthly saving</dt>
+                          <dd>
+                            {formatCurrency(projection.projection.requiredMonthlyContribution)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Months remaining</dt>
+                          <dd>{projection.projection.monthsRemaining}</dd>
+                        </div>
+                        <div>
+                          <dt>Projected value</dt>
+                          <dd>{formatCurrency(projection.projection.projectedValue)}</dd>
+                        </div>
+                      </>
+                    )}
+                  </dl>
+                  {projection.status === "unavailable" && (
+                    <p className="projection-unavailable">Projection unavailable.</p>
+                  )}
+                  <button type="button" onClick={() => startEditing(goal.id)}>
+                    Edit
+                  </button>
+                </>
+              )}
+            </article>
+          );
+        })}
       </div>
     );
   };

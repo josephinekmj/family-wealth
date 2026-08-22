@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 4 - Persistence
+Phase 3 - Minimal UI
 
 ## Current increment
 
-Persistent SQLite SavingsGoalRepository.
+Display derived savings projections for existing goals.
 
 ## Completed
 
@@ -46,11 +46,14 @@ Persistent SQLite SavingsGoalRepository.
 - Added one-time generic demo seeding for a newly created database.
 - Verified savings-goal persistence across a complete backend restart.
 - Added isolated SQLite repository contract tests using in-memory databases.
+- Added derived savings projections to each projectable goal in the browser.
+- Reused the existing application projection service without persisting calculated values.
+- Added a safe per-goal unavailable state for rejected projections.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Review the SQLite persistence design and node:sqlite maturity before selecting the next product increment.
+- Review the projection UI and choose one next increment based on user value.
 
 ## Known issues
 
@@ -68,6 +71,6 @@ Persistent SQLite SavingsGoalRepository.
 ## Security decisions
 
 - SAXO secrets are backend-only and excluded from git via .env patterns.
-- No financial write capability is introduced in this phase.
+- No external financial transaction or execution capability exists.
 - HTTP goal writes are limited to validated local planning data and expose no internal errors.
 - Keep the local database and all SQLite sidecar files outside Git through the ignored .data directory.

@@ -72,6 +72,24 @@ h1 {
   text-align: right;
 }
 
+.goal-card dl .primary-projection {
+  margin: 0.25rem -0.5rem 0;
+  padding: 0.65rem 0.5rem;
+  border-radius: 6px;
+  color: #78350f;
+  background: #fef3c7;
+  font-size: 1.05rem;
+}
+
+.primary-projection dd {
+  font-weight: 700;
+}
+
+.projection-unavailable {
+  margin: 0.75rem 0 0;
+  color: #6b7280;
+}
+
 button {
   margin-top: 0.75rem;
   padding: 0.5rem 0.8rem;
