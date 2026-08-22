@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 2 - Savings domain
+Phase 3 - Minimal UI
 
 ## Current increment
 
-Validated savings-goal HTTP write boundary.
+Browser edit flow for existing savings goals.
 
 ## Completed
 
@@ -38,17 +38,21 @@ Validated savings-goal HTTP write boundary.
 - Added PUT /api/goals/:id with Fastify transport validation and stable 400 responses.
 - Wired savings-goal queries and commands to one shared repository instance.
 - Added API tests for create, update, invalid requests, and PUT-to-GET visibility.
+- Added frontend PUT client for existing savings goals.
+- Added an edit form with explicit number, percentage, and UTC date conversion.
+- Added save-through-PUT followed by GET refetch before updating the displayed state.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Add a minimal browser create/edit form that writes through PUT and refetches goals.
+- Add a persistent SQLite SavingsGoalRepository while preserving the existing repository interface.
 
 ## Known issues
 
 - Repository storage is process-memory only and resets on restart.
-- Frontend data is read-only and reflects demo in-memory backend data.
+- Frontend editing is limited to existing demo goals.
 - Saved data is not persisted across server restarts.
+- Goals cannot be created or deleted from the browser yet.
 
 ## Architecture decisions
 

@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
 import type { SavingsGoalRecord } from "../application/savings-goal-contracts.js";
-import { fetchSavingsGoals } from "./client/savings-goals";
+import { SavingsGoalEditForm } from "./SavingsGoalEditForm.js";
+import {
+  fetchSavingsGoals,
+  updateSavingsGoal,
+  type SavingsGoalUpdate,
+} from "./client/savings-goals.js";
 
 type ViewState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "success"; goals: SavingsGoalRecord[] };
+  { status: "loading" } | { status: "error" } | { status: "success"; goals: SavingsGoalRecord[] };
 
 export default function App() {
   const [viewState, setViewState] = useState<ViewState>({ status: "loading" });
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -34,6 +40,32 @@ export default function App() {
     };
   }, []);
 
+  const startEditing = (id: string) => {
+    setEditingGoalId(id);
+    setSaveError(false);
+  };
+
+  const cancelEditing = () => {
+    setEditingGoalId(null);
+    setSaveError(false);
+  };
+
+  const saveGoal = async (id: string, update: SavingsGoalUpdate) => {
+    setIsSaving(true);
+    setSaveError(false);
+
+    try {
+      await updateSavingsGoal(id, update);
+      const goals = await fetchSavingsGoals();
+      setViewState({ status: "success", goals });
+      setEditingGoalId(null);
+    } catch {
+      setSaveError(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const renderContent = () => {
     if (viewState.status === "loading") {
       return <p>Loading savings goals...</p>;
@@ -51,25 +83,40 @@ export default function App() {
       <div className="goals-list" aria-label="Savings goals">
         {viewState.goals.map((goal) => (
           <article key={goal.id} className="goal-card">
-            <h2>{goal.name}</h2>
-            <dl>
-              <div>
-                <dt>Target</dt>
-                <dd>{formatCurrency(goal.targetAmount)}</dd>
-              </div>
-              <div>
-                <dt>Saved</dt>
-                <dd>{formatCurrency(goal.currentAmount)}</dd>
-              </div>
-              <div>
-                <dt>Target date</dt>
-                <dd>{formatDate(goal.targetDate)}</dd>
-              </div>
-              <div>
-                <dt>Expected return</dt>
-                <dd>{formatPercent(goal.expectedAnnualReturn)}</dd>
-              </div>
-            </dl>
+            {editingGoalId === goal.id ? (
+              <SavingsGoalEditForm
+                goal={goal}
+                isSaving={isSaving}
+                saveError={saveError}
+                onSave={(update) => void saveGoal(goal.id, update)}
+                onCancel={cancelEditing}
+              />
+            ) : (
+              <>
+                <h2>{goal.name}</h2>
+                <dl>
+                  <div>
+                    <dt>Target</dt>
+                    <dd>{formatCurrency(goal.targetAmount)}</dd>
+                  </div>
+                  <div>
+                    <dt>Saved</dt>
+                    <dd>{formatCurrency(goal.currentAmount)}</dd>
+                  </div>
+                  <div>
+                    <dt>Target date</dt>
+                    <dd>{formatDate(goal.targetDate)}</dd>
+                  </div>
+                  <div>
+                    <dt>Expected return</dt>
+                    <dd>{formatPercent(goal.expectedAnnualReturn)}</dd>
+                  </div>
+                </dl>
+                <button type="button" onClick={() => startEditing(goal.id)}>
+                  Edit
+                </button>
+              </>
+            )}
           </article>
         ))}
       </div>
