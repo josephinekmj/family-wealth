@@ -6,8 +6,7 @@ Phase 2 - Savings domain
 
 ## Current increment
 
-Expose read-only savings goals through GET /api/goals using existing
-application query abstractions.
+React frontend reads and displays read-only savings goals from GET /api/goals.
 
 ## Completed
 
@@ -29,16 +28,21 @@ application query abstractions.
 - Added GET /api/goals route in Fastify using SavingsGoalQueries.
 - Added server composition wiring with in-memory repository and demo seed data.
 - Added API tests for status, response shape, seeded payload, and date serialization.
+- Added Vite development proxy from /api to http://127.0.0.1:3000.
+- Added frontend API fetch function for /api/goals.
+- Added read-only React goals view with loading, success, empty, and error states.
+- Added unit tests for fetchSavingsGoals boundary behavior.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Commit and push this read-only API increment to origin.
-- Start next small increment: React frontend reads and displays GET /api/goals.
+- Commit and push this read-only frontend increment to origin.
+- Start next small increment: add optional manual refresh in the read-only goals UI.
 
 ## Known issues
 
 - Repository storage is process-memory only and resets on restart.
+- Frontend data is read-only and reflects demo in-memory backend data.
 
 ## Architecture decisions
 
