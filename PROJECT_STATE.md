@@ -6,7 +6,7 @@ Phase 2 - Savings domain
 
 ## Current increment
 
-Validated savings-goal application save command.
+Validated savings-goal HTTP write boundary.
 
 ## Completed
 
@@ -35,24 +35,29 @@ Validated savings-goal application save command.
 - Added validated application save command through SavingsGoalRepository.
 - Added write-boundary validation before repository save.
 - Added integration tests for save success, upsert behavior, and invalid input rejection.
+- Added PUT /api/goals/:id with Fastify transport validation and stable 400 responses.
+- Wired savings-goal queries and commands to one shared repository instance.
+- Added API tests for create, update, invalid requests, and PUT-to-GET visibility.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Expose the validated command through one controlled HTTP write endpoint.
+- Add a minimal browser create/edit form that writes through PUT and refetches goals.
 
 ## Known issues
 
 - Repository storage is process-memory only and resets on restart.
 - Frontend data is read-only and reflects demo in-memory backend data.
-- No HTTP write capability is exposed yet.
+- Saved data is not persisted across server restarts.
 
 ## Architecture decisions
 
 - Keep a single modular monolith in one public repository.
 - Keep domain layer independent from framework and infrastructure code.
+- Use PUT /api/goals/:id for idempotent full-record upserts with the ID sourced only from the URL.
 
 ## Security decisions
 
 - SAXO secrets are backend-only and excluded from git via .env patterns.
 - No financial write capability is introduced in this phase.
+- HTTP goal writes are limited to validated local planning data and expose no internal errors.
