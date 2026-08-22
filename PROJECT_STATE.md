@@ -6,7 +6,7 @@ Phase 2 - Savings domain
 
 ## Current increment
 
-React frontend reads and displays read-only savings goals from GET /api/goals.
+Validated savings-goal application save command.
 
 ## Completed
 
@@ -32,21 +32,24 @@ React frontend reads and displays read-only savings goals from GET /api/goals.
 - Added frontend API fetch function for /api/goals.
 - Added read-only React goals view with loading, success, empty, and error states.
 - Added unit tests for fetchSavingsGoals boundary behavior.
+- Added validated application save command through SavingsGoalRepository.
+- Added write-boundary validation before repository save.
+- Added integration tests for save success, upsert behavior, and invalid input rejection.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Commit and push this read-only frontend increment to origin.
-- Start next small increment: add optional manual refresh in the read-only goals UI.
+- Expose the validated command through one controlled HTTP write endpoint.
 
 ## Known issues
 
 - Repository storage is process-memory only and resets on restart.
 - Frontend data is read-only and reflects demo in-memory backend data.
+- No HTTP write capability is exposed yet.
 
 ## Architecture decisions
 
-- Keep a single modular monolith in one private repository.
+- Keep a single modular monolith in one public repository.
 - Keep domain layer independent from framework and infrastructure code.
 
 ## Security decisions
