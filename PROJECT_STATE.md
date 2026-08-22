@@ -6,8 +6,8 @@ Phase 2 - Savings domain
 
 ## Current increment
 
-Introduce a minimal application service for savings projections that composes
-the pure domain calculation and supports injected time for deterministic usage.
+Define SavingsGoal application contracts and mapping boundaries ahead of
+persistence.
 
 ## Completed
 
@@ -21,13 +21,15 @@ the pure domain calculation and supports injected time for deterministic usage.
 - Added domain unit tests in tests/savings-projection.test.ts.
 - Added application service in src/application/savings-projection-service.ts.
 - Added application unit tests in tests/savings-projection-service.test.ts.
+- Added contracts and repository interface in src/application/savings-goal-contracts.ts.
+- Added mapping tests in tests/savings-goal-contracts.test.ts.
 - Validation gates pass: tests, typecheck, lint, and build.
 
 ## Next
 
-- Commit and push the current bootstrap + Phase 2 increments to origin.
-- Start next small increment in Phase 2: define SavingsGoal application
-  contracts and mapping boundaries ahead of persistence.
+- Commit and push this contracts increment to origin.
+- Start next small increment in Phase 2: add in-memory SavingsGoalRepository
+  adapter for application-level integration tests before SQLite.
 
 ## Known issues
 
