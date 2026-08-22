@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "dist/server",
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src/server/**/*.ts", "src/domain/**/*.ts", "src/application/**/*.ts", "src/saxo/**/*.ts"],
+  "exclude": ["src/web", "tests"]
+}
