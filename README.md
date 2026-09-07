@@ -47,6 +47,11 @@ npm run build
 }
 ```
 
+## Local database backup and restore
+
+Follow the [manual SQLite backup and restore procedure](docs/backup-restore.md).
+Stop the backend before copying or restoring the database, and keep backups outside Git.
+
 ## Security Notes
 
 - Keep secrets only in .env (never in git).

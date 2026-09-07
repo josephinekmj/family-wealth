@@ -6,7 +6,7 @@ Phase 3 - Minimal UI
 
 ## Current increment
 
-Create a new savings goal from the browser.
+Local SQLite backup and restore procedure.
 
 ## Completed
 
@@ -57,16 +57,21 @@ Create a new savings goal from the browser.
 - Creation and editing reuse one form and conversion path, with only one form open at a time.
 - New persisted goals automatically participate in per-goal and combined savings projections.
 - Verified browser creation, cancel, saving/error states, editing, and persistence after backend restart.
+- Documented manual local SQLite backup with the backend stopped and a verified copy outside Git.
+- Documented restore with a verified safety copy of the current database before replacement.
+- Verified round-trip recovery using disposable generic data: stopped backup, mutation, stopped restore, and restart.
+- Confirmed the restored state through GET /api/goals and browser goals/projections.
 - Validation gates pass: 91 tests, typecheck, lint, and build.
 
 ## Next
 
-- Add a documented local SQLite backup and restore procedure.
+- Introduce a Mock Saxo adapter behind an InvestmentAccountGateway boundary, without real Saxo credentials or network calls.
 
 ## Known issues
 
 - No delete capability.
-- Persistence uses one local SQLite database and has no backup strategy yet.
+- Backup is manual and requires stopping the backend.
+- No automatic or off-device backup yet.
 - No external brokerage integration.
 
 ## Architecture decisions
