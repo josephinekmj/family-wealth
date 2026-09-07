@@ -6,6 +6,7 @@ import {
   buildSaxoSimAuthorizationUrl,
   generateSaxoOAuthState,
   loadInvestmentAccountProviderConfiguration,
+  SaxoSimDeveloperAccessTokenProvider,
   type SaxoSimConfiguration,
 } from "../src/saxo/index.js";
 
@@ -31,6 +32,42 @@ describe("Saxo SIM configuration", () => {
       }),
     ).toEqual(simConfiguration);
   });
+
+  it("loads a developer token without OAuth configuration", () => {
+    expect(
+      loadInvestmentAccountProviderConfiguration({
+        SAXO_MODE: "saxo-sim",
+        SAXO_SIM_DEVELOPER_ACCESS_TOKEN: "test-developer-token",
+      }),
+    ).toEqual({ provider: "saxo-sim", developerAccessToken: "test-developer-token" });
+  });
+
+  it("treats a blank developer token as absent and loads OAuth configuration", () => {
+    expect(
+      loadInvestmentAccountProviderConfiguration({
+        SAXO_MODE: "saxo-sim",
+        SAXO_SIM_DEVELOPER_ACCESS_TOKEN: "  ",
+        SAXO_SIM_APP_KEY: "test-client-id",
+        SAXO_SIM_APP_SECRET: "test-client-secret",
+        SAXO_SIM_REDIRECT_URI: "http://127.0.0.1:3000/auth/saxo/callback",
+      }),
+    ).toEqual(simConfiguration);
+  });
+
+  it.each(["SAXO_SIM_APP_KEY", "SAXO_SIM_APP_SECRET", "SAXO_SIM_REDIRECT_URI"])(
+    "rejects a developer token combined with %s without exposing secrets",
+    (oauthName) => {
+      const environment: NodeJS.ProcessEnv = {
+        SAXO_MODE: "saxo-sim",
+        SAXO_SIM_DEVELOPER_ACCESS_TOKEN: "private-developer-token",
+        [oauthName]: "private-oauth-value",
+      };
+      const loadConfiguration = () => loadInvestmentAccountProviderConfiguration(environment);
+
+      expect(loadConfiguration).toThrow("Saxo SIM authentication configuration is ambiguous");
+      expect(loadConfiguration).not.toThrow(/private-developer-token|private-oauth-value/);
+    },
+  );
 
   it("accepts and normalizes an HTTPS redirect URI", () => {
     const configuration = loadInvestmentAccountProviderConfiguration({
@@ -142,5 +179,22 @@ describe("Saxo OAuth state", () => {
 
   it("generates different values", () => {
     expect(generateSaxoOAuthState()).not.toBe(generateSaxoOAuthState());
+  });
+});
+
+describe("SaxoSimDeveloperAccessTokenProvider", () => {
+  it("returns the supplied token with unknown expiry", async () => {
+    const provider = new SaxoSimDeveloperAccessTokenProvider("test-developer-token");
+
+    await expect(provider.getAccessToken()).resolves.toEqual({
+      value: "test-developer-token",
+      expiresAt: null,
+    });
+  });
+
+  it.each(["", " ", "\t\n"])("rejects blank token %j", (token) => {
+    expect(() => new SaxoSimDeveloperAccessTokenProvider(token)).toThrow(
+      "Saxo SIM developer access token is required",
+    );
   });
 });

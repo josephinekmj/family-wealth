@@ -2,6 +2,7 @@ import type { InvestmentAccountGateway } from "../application/investment-account
 import { MockInvestmentAccountGateway } from "../infrastructure/mock-investment-account-gateway.js";
 import {
   InMemorySaxoOAuthStateStore,
+  SaxoSimDeveloperAccessTokenProvider,
   SaxoSimAccessTokenProvider,
   type InvestmentAccountProviderConfiguration,
   type SaxoAuthorizationCodeReceiver,
@@ -38,6 +39,15 @@ export const composeInvestmentAccountRuntime = (
       investmentAccountGateway: new MockInvestmentAccountGateway([
         { id: "mock-account-1", name: "Investment account", currency: "DKK" },
       ]),
+    };
+  }
+
+  if ("developerAccessToken" in configuration) {
+    return {
+      investmentAccountGateway: new SaxoInvestmentAccountGateway(
+        new SaxoSimDeveloperAccessTokenProvider(configuration.developerAccessToken),
+        overrides.accountFetch ?? globalThis.fetch,
+      ),
     };
   }
 

@@ -67,6 +67,86 @@ describe("investment account runtime composition", () => {
     }
   });
 
+  it("uses the developer token for accounts without registering OAuth routes", async () => {
+    const accountFetch = vi.fn<
+      (input: string | URL, init?: RequestInit) => Promise<Response>
+    >(async () =>
+      jsonResponse({
+        Data: [
+          {
+            AccountKey: "developer-account-key",
+            AccountId: "developer-account-id",
+            DisplayName: "Developer SIM account",
+            Currency: "EUR",
+          },
+        ],
+      }),
+    );
+    const runtime = composeInvestmentAccountRuntime(
+      { provider: "saxo-sim", developerAccessToken: "test-developer-token" },
+      { accountFetch },
+    );
+    const app = buildServer(runtime);
+
+    try {
+      expect(runtime.investmentAccountGateway).toBeInstanceOf(SaxoInvestmentAccountGateway);
+      expect(runtime.saxoOAuth).toBeUndefined();
+
+      const accountsResponse = await app.inject({
+        method: "GET",
+        url: "/api/investment-accounts",
+      });
+      const startResponse = await app.inject({ method: "GET", url: "/auth/saxo/start" });
+      const callbackResponse = await app.inject({
+        method: "GET",
+        url: "/auth/saxo/callback?code=test-code&state=test-state",
+      });
+
+      expect(accountsResponse.statusCode).toBe(200);
+      expect(accountsResponse.json()).toEqual([
+        {
+          id: expect.stringMatching(/^saxo-[a-f0-9]{64}$/),
+          name: "Developer SIM account",
+          currency: "EUR",
+        },
+      ]);
+      expect(accountsResponse.body).not.toMatch(
+        /test-developer-token|developer-account-key|developer-account-id/,
+      );
+      expect(startResponse.statusCode).toBe(404);
+      expect(callbackResponse.statusCode).toBe(404);
+      expect(accountFetch).toHaveBeenCalledOnce();
+      expect(new Headers(accountFetch.mock.calls[0]![1]?.headers).get("Authorization")).toBe(
+        "Bearer test-developer-token",
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns a generic failure for an invalid developer token", async () => {
+    const accountFetch = vi.fn(async () =>
+      jsonResponse({ error: "raw-saxo-error", access_token: "response-token" }, 401),
+    );
+    const runtime = composeInvestmentAccountRuntime(
+      { provider: "saxo-sim", developerAccessToken: "test-developer-token" },
+      { accountFetch },
+    );
+    const app = buildServer(runtime);
+
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/investment-accounts" });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({ error: "Investment accounts are not available" });
+      expect(response.body).not.toMatch(
+        /test-developer-token|raw-saxo-error|response-token/,
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
   it("shares callback-acquired tokens with the Saxo account gateway", async () => {
     const tokenFetch = vi.fn(async () =>
       jsonResponse({

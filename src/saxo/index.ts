@@ -12,17 +12,39 @@ export type SaxoSimConfiguration = {
 	redirectUri: string;
 };
 
+export type SaxoSimDeveloperTokenConfiguration = {
+	provider: "saxo-sim";
+	developerAccessToken: string;
+};
+
 export type InvestmentAccountProviderConfiguration =
 	| { provider: "mock" }
-	| SaxoSimConfiguration;
+	| SaxoSimConfiguration
+	| SaxoSimDeveloperTokenConfiguration;
 
 export type SaxoAccessToken = {
 	value: string;
-	expiresAt: Date;
+	expiresAt: Date | null;
 };
 
 export interface SaxoAccessTokenProvider {
 	getAccessToken(): Promise<SaxoAccessToken>;
+}
+
+export class SaxoSimDeveloperAccessTokenProvider implements SaxoAccessTokenProvider {
+	private readonly accessToken: string;
+
+	constructor(accessToken: string) {
+		if (!accessToken.trim()) {
+			throw new Error("Saxo SIM developer access token is required");
+		}
+
+		this.accessToken = accessToken;
+	}
+
+	async getAccessToken(): Promise<SaxoAccessToken> {
+		return { value: this.accessToken, expiresAt: null };
+	}
 }
 
 type SaxoFetch = (
@@ -310,6 +332,21 @@ export const loadInvestmentAccountProviderConfiguration = (
 
 	if (provider !== "saxo-sim") {
 		throw new Error("SAXO_MODE must be either mock or saxo-sim; LIVE is not supported");
+	}
+
+	const developerAccessToken = environment.SAXO_SIM_DEVELOPER_ACCESS_TOKEN?.trim();
+	const hasOAuthConfiguration = [
+		environment.SAXO_SIM_APP_KEY,
+		environment.SAXO_SIM_APP_SECRET,
+		environment.SAXO_SIM_REDIRECT_URI,
+	].some((value) => Boolean(value?.trim()));
+
+	if (developerAccessToken && hasOAuthConfiguration) {
+		throw new Error("Saxo SIM authentication configuration is ambiguous");
+	}
+
+	if (developerAccessToken) {
+		return { provider: "saxo-sim", developerAccessToken };
 	}
 
 	return {
