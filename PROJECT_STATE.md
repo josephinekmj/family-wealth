@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Memory-only Saxo SIM refresh-token rotation.
+Read-only Saxo SIM investment-account adapter.
 
 ## Completed
 
@@ -95,11 +95,15 @@ Memory-only Saxo SIM refresh-token rotation.
 - Added atomic access/refresh token rotation after complete response validation.
 - Added refresh-token expiry checks and one-request coalescing for concurrent access callers.
 - Kept prior token state intact when refresh transport or validation fails.
-- Validation gates pass: 168 tests, typecheck, lint, and build.
+- Added an isolated SaxoInvestmentAccountGateway behind the existing provider-neutral contract.
+- Added Bearer-authenticated read-only SIM account discovery through GET /port/v1/accounts/me.
+- Added fail-closed mapping from private Saxo response fields to id, name, and currency only.
+- Added stable opaque account IDs derived from AccountKey without exposing the provider identifier.
+- Validation gates pass: 184 tests, typecheck, lint, and build.
 
 ## Next
 
-- Introduce a read-only Saxo SIM InvestmentAccountGateway behind explicit runtime selection, with Mock remaining the default and no financial writes.
+- Allow explicit SAXO_MODE=saxo-sim runtime composition to select SaxoInvestmentAccountGateway after successful OAuth, while keeping Mock as the default and preserving read-only behavior.
 
 ## Known issues
 
@@ -107,11 +111,11 @@ Memory-only Saxo SIM refresh-token rotation.
 - Backup is manual and requires stopping the backend.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
-- Investment accounts use mock data only; Saxo SIM OAuth does not select an account gateway.
+- Investment accounts use mock data at runtime; the isolated Saxo adapter is not selected by composition.
 - Access and optional refresh tokens are process-local and disappear on restart.
 - Refresh occurs only on demand through getAccessToken; there are no timers or background jobs.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
-- No Saxo OpenAPI account calls exist.
+- No balances, positions, ASK detection, or other Saxo OpenAPI resources are implemented.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.
 - No financial execution capability.
