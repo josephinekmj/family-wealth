@@ -124,6 +124,17 @@ export class SaxoSimAccessTokenProvider
 		return this.toAccessToken(this.tokenState);
 	}
 
+	hasAuthentication(): boolean {
+		const now = this.now();
+		return Boolean(
+			this.tokenState &&
+				(this.tokenState.accessTokenExpiresAt > now ||
+					(this.tokenState.refreshToken &&
+						(this.tokenState.refreshTokenExpiresAt === undefined ||
+							this.tokenState.refreshTokenExpiresAt > now))),
+		);
+	}
+
 	private async refreshAccessToken(refreshToken: string): Promise<void> {
 		try {
 			const nextTokenState = await this.requestToken(

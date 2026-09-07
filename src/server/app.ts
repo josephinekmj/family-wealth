@@ -28,6 +28,11 @@ type SaxoOAuthCallbackQuery = {
   error_description?: string;
 };
 
+export type InvestmentConnectionStatus = {
+  source: "mock" | "saxo-sim";
+  status: "connected" | "not-connected";
+};
+
 const savingsGoalBodySchema = {
   type: "object",
   additionalProperties: false,
@@ -44,6 +49,7 @@ const savingsGoalBodySchema = {
 export type BuildServerDependencies = {
   savingsGoalRepository?: SavingsGoalRepository;
   investmentAccountGateway?: InvestmentAccountGateway;
+  getInvestmentConnectionStatus?: () => InvestmentConnectionStatus;
   saxoOAuth?: {
     configuration: SaxoSimConfiguration;
     stateStore: SaxoOAuthStateStore;
@@ -89,6 +95,15 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
     } catch {
       return reply.status(503).send({ error: "Investment accounts are not available" });
     }
+  });
+
+  app.get("/api/investment-accounts/status", async () => {
+    return (
+      dependencies.getInvestmentConnectionStatus?.() ?? {
+        source: "mock",
+        status: "connected",
+      }
+    );
   });
 
   if (dependencies.saxoOAuth) {

@@ -83,3 +83,43 @@ describe("GET /api/investment-accounts", () => {
     }
   });
 });
+
+describe("GET /api/investment-accounts/status", () => {
+  it("returns connected mock status by default", async () => {
+    const app = buildServer();
+
+    try {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/investment-accounts/status",
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ source: "mock", status: "connected" });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns only injected provider-neutral status fields", async () => {
+    const app = buildServer({
+      getInvestmentConnectionStatus: () => ({
+        source: "saxo-sim",
+        status: "not-connected",
+      }),
+    });
+
+    try {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/investment-accounts/status",
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ source: "saxo-sim", status: "not-connected" });
+      expect(response.body).not.toMatch(/token|secret|oauth|developer/i);
+    } finally {
+      await app.close();
+    }
+  });
+});

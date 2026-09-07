@@ -25,6 +25,10 @@ describe("investment account runtime composition", () => {
     try {
       expect(runtime.investmentAccountGateway).toBeInstanceOf(MockInvestmentAccountGateway);
       expect(runtime.saxoOAuth).toBeUndefined();
+      expect(runtime.getInvestmentConnectionStatus()).toEqual({
+        source: "mock",
+        status: "connected",
+      });
 
       const accountsResponse = await app.inject({
         method: "GET",
@@ -54,6 +58,10 @@ describe("investment account runtime composition", () => {
     try {
       expect(runtime.investmentAccountGateway).toBeInstanceOf(SaxoInvestmentAccountGateway);
       expect(runtime.saxoOAuth).toBeDefined();
+      expect(runtime.getInvestmentConnectionStatus()).toEqual({
+        source: "saxo-sim",
+        status: "not-connected",
+      });
 
       const response = await app.inject({ method: "GET", url: "/api/investment-accounts" });
 
@@ -91,6 +99,10 @@ describe("investment account runtime composition", () => {
     try {
       expect(runtime.investmentAccountGateway).toBeInstanceOf(SaxoInvestmentAccountGateway);
       expect(runtime.saxoOAuth).toBeUndefined();
+      expect(runtime.getInvestmentConnectionStatus()).toEqual({
+        source: "saxo-sim",
+        status: "connected",
+      });
 
       const accountsResponse = await app.inject({
         method: "GET",
@@ -191,6 +203,10 @@ describe("investment account runtime composition", () => {
 
       expect(startResponse.statusCode).toBe(302);
       expect(callbackResponse.statusCode).toBe(200);
+      expect(runtime.getInvestmentConnectionStatus()).toEqual({
+        source: "saxo-sim",
+        status: "connected",
+      });
       expect(callbackResponse.body).not.toMatch(
         /test-code|shared-state|test-access-token|test-refresh-token|test-client-secret/,
       );

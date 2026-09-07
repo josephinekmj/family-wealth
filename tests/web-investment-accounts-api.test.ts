@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InvestmentAccountSummary } from "../src/application/investment-account-contracts.js";
-import { fetchInvestmentAccounts } from "../src/web/client/investment-accounts.js";
+import {
+  fetchInvestmentAccounts,
+  fetchInvestmentConnectionStatus,
+} from "../src/web/client/investment-accounts.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -38,5 +41,49 @@ describe("fetchInvestmentAccounts", () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 })) as typeof fetch;
 
     await expect(fetchInvestmentAccounts()).rejects.toThrow(/Could not load investment accounts/);
+  });
+});
+
+describe("fetchInvestmentConnectionStatus", () => {
+  it("uses GET /api/investment-accounts/status", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({ source: "mock", status: "connected" }),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    await fetchInvestmentConnectionStatus();
+
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith("/api/investment-accounts/status");
+  });
+
+  it.each([
+    { source: "mock", status: "connected" },
+    { source: "saxo-sim", status: "connected" },
+    { source: "saxo-sim", status: "not-connected" },
+  ] as const)("returns valid status %#", async (status) => {
+    globalThis.fetch = vi.fn(async () => Response.json(status)) as typeof fetch;
+
+    expect(await fetchInvestmentConnectionStatus()).toEqual(status);
+  });
+
+  it("rejects non-success responses", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 503 })) as typeof fetch;
+
+    await expect(fetchInvestmentConnectionStatus()).rejects.toThrow(
+      /Could not load investment connection status/,
+    );
+  });
+
+  it.each([
+    null,
+    {},
+    { source: "saxo-live", status: "connected" },
+    { source: "saxo-sim", status: "authenticated" },
+  ])("rejects malformed status %#", async (status) => {
+    globalThis.fetch = vi.fn(async () => Response.json(status)) as typeof fetch;
+
+    await expect(fetchInvestmentConnectionStatus()).rejects.toThrow(
+      "Could not load investment connection status",
+    );
   });
 });

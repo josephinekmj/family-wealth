@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { InvestmentAccountSummary } from "../application/investment-account-contracts.js";
-import { fetchInvestmentAccounts } from "./client/investment-accounts.js";
+import {
+  fetchInvestmentAccounts,
+  fetchInvestmentConnectionStatus,
+  type InvestmentConnectionStatus,
+} from "./client/investment-accounts.js";
 
 type ViewState =
   | { status: "loading" }
@@ -9,6 +13,7 @@ type ViewState =
 
 export function InvestmentAccountsSection() {
   const [viewState, setViewState] = useState<ViewState>({ status: "loading" });
+  const [connectionStatus, setConnectionStatus] = useState<InvestmentConnectionStatus | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -25,6 +30,18 @@ export function InvestmentAccountsSection() {
         }
       });
 
+    void fetchInvestmentConnectionStatus()
+      .then((status) => {
+        if (isActive) {
+          setConnectionStatus(status);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setConnectionStatus(null);
+        }
+      });
+
     return () => {
       isActive = false;
     };
@@ -33,7 +50,15 @@ export function InvestmentAccountsSection() {
   return (
     <section className="investment-accounts" aria-labelledby="investment-accounts-heading">
       <h2 id="investment-accounts-heading">Investment accounts</h2>
-      <p className="demo-label">Demo data</p>
+      {connectionStatus && (
+        <p className="connection-label">
+          {connectionStatus.source === "mock"
+            ? "Demo data"
+            : connectionStatus.status === "connected"
+              ? "Saxo SIM"
+              : "Saxo SIM not connected"}
+        </p>
+      )}
       {viewState.status === "loading" && <p>Loading investment accounts...</p>}
       {viewState.status === "error" && <p>Could not load investment accounts.</p>}
       {viewState.status === "success" &&

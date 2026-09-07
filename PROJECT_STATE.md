@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Saxo SIM Developer Portal token bootstrap.
+Read-only investment connection status.
 
 ## Completed
 
@@ -107,11 +107,15 @@ Saxo SIM Developer Portal token bootstrap.
 - Added an in-memory developer access-token provider with intentionally unknown expiry.
 - Added developer-token runtime composition through the existing read-only Saxo account gateway.
 - Preserved the existing OAuth composition unchanged and rejected ambiguous authentication configuration.
-- Validation gates pass: 199 tests, typecheck, lint, and build.
+- Added a provider-neutral investment connection status endpoint without changing the accounts contract.
+- Added dynamic mock, authenticated Saxo SIM, and unauthenticated Saxo SIM status composition.
+- Updated React to show Demo data, Saxo SIM, or Saxo SIM not connected from backend status.
+- Kept account data and connection status strictly read-only with no authentication details exposed.
+- Validation gates pass: 211 tests, typecheck, lint, and build.
 
 ## Next
 
-- Manually verify read-only account discovery against Saxo SIM using a user-supplied local Developer Portal token.
+- Manually verify read-only account discovery and the Saxo SIM label using a user-supplied local Developer Portal token.
 
 ## Known issues
 
@@ -124,7 +128,7 @@ Saxo SIM Developer Portal token bootstrap.
 - Access and optional refresh tokens are process-local and disappear on restart.
 - Refresh occurs only on demand through getAccessToken; there are no timers or background jobs.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
-- React still labels investment accounts as Demo data regardless of configured provider.
+- Connection status reports only provider source and connected state; it exposes no authentication details.
 - Only account discovery is implemented; there are no balances, positions, ASK detection, or other Saxo OpenAPI resources.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.

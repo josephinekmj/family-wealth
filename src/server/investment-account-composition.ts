@@ -1,5 +1,6 @@
 import type { InvestmentAccountGateway } from "../application/investment-account-contracts.js";
 import { MockInvestmentAccountGateway } from "../infrastructure/mock-investment-account-gateway.js";
+import type { InvestmentConnectionStatus } from "./app.js";
 import {
   InMemorySaxoOAuthStateStore,
   SaxoSimDeveloperAccessTokenProvider,
@@ -15,6 +16,7 @@ type SaxoFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
 export type InvestmentAccountRuntime = {
   investmentAccountGateway: InvestmentAccountGateway;
+  getInvestmentConnectionStatus: () => InvestmentConnectionStatus;
   saxoOAuth?: {
     configuration: SaxoSimConfiguration;
     stateStore: SaxoOAuthStateStore;
@@ -39,6 +41,7 @@ export const composeInvestmentAccountRuntime = (
       investmentAccountGateway: new MockInvestmentAccountGateway([
         { id: "mock-account-1", name: "Investment account", currency: "DKK" },
       ]),
+      getInvestmentConnectionStatus: () => ({ source: "mock", status: "connected" }),
     };
   }
 
@@ -48,6 +51,7 @@ export const composeInvestmentAccountRuntime = (
         new SaxoSimDeveloperAccessTokenProvider(configuration.developerAccessToken),
         overrides.accountFetch ?? globalThis.fetch,
       ),
+      getInvestmentConnectionStatus: () => ({ source: "saxo-sim", status: "connected" }),
     };
   }
 
@@ -61,6 +65,10 @@ export const composeInvestmentAccountRuntime = (
       tokenProvider,
       overrides.accountFetch ?? globalThis.fetch,
     ),
+    getInvestmentConnectionStatus: () => ({
+      source: "saxo-sim",
+      status: tokenProvider.hasAuthentication() ? "connected" : "not-connected",
+    }),
     saxoOAuth: {
       configuration,
       stateStore: overrides.stateStore ?? new InMemorySaxoOAuthStateStore(),

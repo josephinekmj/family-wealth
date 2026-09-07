@@ -374,4 +374,28 @@ describe("SaxoSimAccessTokenProvider", () => {
     const retryBody = new URLSearchParams(fetchRequest.mock.calls[2]![1]?.body as URLSearchParams);
     expect(retryBody.get("refresh_token")).toBe("original-refresh-token");
   });
+
+  it("reports authentication while access or refresh credentials remain usable", async () => {
+    let now = 0;
+    const provider = new SaxoSimAccessTokenProvider(
+      configuration,
+      async () =>
+        tokenResponse({
+          access_token: "test-access-token",
+          token_type: "Bearer",
+          expires_in: 60,
+          refresh_token: "test-refresh-token",
+          refresh_token_expires_in: 120,
+        }),
+      () => now,
+    );
+
+    expect(provider.hasAuthentication()).toBe(false);
+    await provider.receive("test-code");
+    expect(provider.hasAuthentication()).toBe(true);
+    now = 60_000;
+    expect(provider.hasAuthentication()).toBe(true);
+    now = 120_000;
+    expect(provider.hasAuthentication()).toBe(false);
+  });
 });
