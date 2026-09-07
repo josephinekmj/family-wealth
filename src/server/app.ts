@@ -1,13 +1,16 @@
 import Fastify from "fastify";
 import {
+  createInvestmentAccountQueries,
   createSavingsGoalCommands,
   createSavingsGoalQueries,
   InMemorySavingsGoalRepository,
   mapRecordToSavingsGoalProfile,
   mapSavingsGoalProfileToRecord,
+  type InvestmentAccountGateway,
   type SavingsGoalRecord,
   type SavingsGoalRepository,
 } from "../application/index.js";
+import { MockInvestmentAccountGateway } from "../infrastructure/mock-investment-account-gateway.js";
 import { DEMO_SAVINGS_GOALS } from "./demo-savings-goals.js";
 
 type SavingsGoalBody = Omit<SavingsGoalRecord, "id">;
@@ -27,6 +30,7 @@ const savingsGoalBodySchema = {
 
 export type BuildServerDependencies = {
   savingsGoalRepository?: SavingsGoalRepository;
+  investmentAccountGateway?: InvestmentAccountGateway;
 };
 
 export function buildServer(dependencies: BuildServerDependencies = {}) {
@@ -43,6 +47,12 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
     dependencies.savingsGoalRepository ?? new InMemorySavingsGoalRepository(DEMO_SAVINGS_GOALS);
   const savingsGoalQueries = createSavingsGoalQueries(savingsGoalRepository);
   const savingsGoalCommands = createSavingsGoalCommands(savingsGoalRepository);
+  const investmentAccountGateway =
+    dependencies.investmentAccountGateway ??
+    new MockInvestmentAccountGateway([
+      { id: "mock-account-1", name: "Investment account", currency: "DKK" },
+    ]);
+  const investmentAccountQueries = createInvestmentAccountQueries(investmentAccountGateway);
 
   app.get("/health", async () => {
     return { status: "ok" };
@@ -51,6 +61,11 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
   app.get("/api/goals", async () => {
     const goals = await savingsGoalQueries.listSavingsGoals();
     return goals.map(mapSavingsGoalProfileToRecord);
+  });
+
+  app.get("/api/investment-accounts", async () => {
+    const accounts = await investmentAccountQueries.listInvestmentAccounts();
+    return accounts.map(({ id, name, currency }) => ({ id, name, currency }));
   });
 
   app.put<{ Params: { id: string }; Body: SavingsGoalBody }>(

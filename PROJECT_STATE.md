@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 3 - Minimal UI
+Phase 5 - Mock investment integration
 
 ## Current increment
 
-Mock investment account gateway boundary.
+Expose mock investment accounts through read-only HTTP API.
 
 ## Completed
 
@@ -65,11 +65,15 @@ Mock investment account gateway boundary.
 - Added a read-only investment account query that depends only on the gateway interface.
 - Added a mock adapter with constructor seed isolation and safe copies on every read.
 - Added contract/query tests covering delegation, empty results, failures, and mutation isolation.
-- Validation gates pass: 100 tests, typecheck, lint, and build.
+- Added GET /api/investment-accounts through the existing application query and provider-neutral gateway dependency.
+- Composed a generic default mock for investment accounts while retaining SQLite for savings goals.
+- Added API tests for default/injected/empty gateways, public fields, and absent investment-account write routes.
+- Verified local HTTP 200 responses for investment accounts, health, and savings goals.
+- Validation gates pass: 107 tests, typecheck, lint, and build.
 
 ## Next
 
-- Expose the existing read-only investment account query through one local GET endpoint using the Mock gateway.
+- Display the read-only mock investment accounts in the existing React UI.
 
 ## Known issues
 
@@ -77,7 +81,7 @@ Mock investment account gateway boundary.
 - Backup is manual and requires stopping the backend.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
-- Investment accounts use mock data only; no Saxo network integration or OAuth.
+- Investment accounts use mock data only; no Saxo SIM, network integration, or OAuth.
 - No investment account UI.
 - No financial execution capability.
 
