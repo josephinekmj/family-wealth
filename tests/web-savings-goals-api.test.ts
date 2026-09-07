@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchSavingsGoals, updateSavingsGoal } from "../src/web/client/savings-goals.js";
+import {
+  createSavingsGoal,
+  fetchSavingsGoals,
+  updateSavingsGoal,
+  type SavingsGoalUpdate,
+} from "../src/web/client/savings-goals.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -100,6 +105,52 @@ describe("updateSavingsGoal", () => {
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 400 })) as typeof fetch;
 
     await expect(updateSavingsGoal("goal-1", update)).rejects.toThrow(
+      /Could not save savings goal/,
+    );
+  });
+});
+
+describe("createSavingsGoal", () => {
+  const goal: SavingsGoalUpdate = {
+    name: "New savings goal",
+    targetAmount: 12000,
+    currentAmount: 0,
+    targetDate: "2034-06-01T00:00:00.000Z",
+    expectedAnnualReturn: 0.04,
+  };
+
+  it("uses a generated UUID with PUT and the existing body contract, resolving for 204", async () => {
+    const id = "12345678-1234-4234-8234-123456789abc";
+    const randomUUID = vi.spyOn(crypto, "randomUUID").mockReturnValue(id);
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    await expect(createSavingsGoal(goal)).resolves.toBeUndefined();
+
+    expect(randomUUID).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(`/api/goals/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(goal),
+    });
+    expect(goal).not.toHaveProperty("id");
+  });
+
+  it("accepts a deterministic ID factory and encodes its result in the route", async () => {
+    const createId = vi.fn(() => "goal/with spaces");
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    await createSavingsGoal(goal, createId);
+
+    expect(createId).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/goals/goal%2Fwith%20spaces", expect.any(Object));
+  });
+
+  it("throws for non-2xx responses", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 })) as typeof fetch;
+
+    await expect(createSavingsGoal(goal, () => "new-goal")).rejects.toThrow(
       /Could not save savings goal/,
     );
   });

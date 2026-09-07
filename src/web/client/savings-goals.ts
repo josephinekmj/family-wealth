@@ -23,3 +23,10 @@ export async function updateSavingsGoal(id: string, goal: SavingsGoalUpdate): Pr
     throw new Error(`Could not save savings goal (${response.status})`);
   }
 }
+
+export async function createSavingsGoal(
+  goal: SavingsGoalUpdate,
+  createId: () => string = () => crypto.randomUUID(),
+): Promise<void> {
+  await updateSavingsGoal(createId(), goal);
+}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { SavingsGoalRecord } from "../application/savings-goal-contracts.js";
-import { SavingsGoalEditForm } from "./SavingsGoalEditForm.js";
+import { SavingsGoalForm } from "./SavingsGoalForm.js";
 import {
+  createSavingsGoal,
   fetchSavingsGoals,
   updateSavingsGoal,
   type SavingsGoalUpdate,
@@ -14,9 +15,11 @@ import {
 type ViewState =
   { status: "loading" } | { status: "error" } | { status: "success"; goals: SavingsGoalRecord[] };
 
+type FormMode = { kind: "create" } | { kind: "edit"; id: string } | null;
+
 export default function App() {
   const [viewState, setViewState] = useState<ViewState>({ status: "loading" });
-  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [formMode, setFormMode] = useState<FormMode>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
@@ -45,24 +48,37 @@ export default function App() {
   }, []);
 
   const startEditing = (id: string) => {
-    setEditingGoalId(id);
+    setFormMode({ kind: "edit", id });
     setSaveError(false);
   };
 
-  const cancelEditing = () => {
-    setEditingGoalId(null);
+  const closeForm = () => {
+    setFormMode(null);
     setSaveError(false);
   };
 
-  const saveGoal = async (id: string, update: SavingsGoalUpdate) => {
+  const startCreating = () => {
+    setFormMode({ kind: "create" });
+    setSaveError(false);
+  };
+
+  const saveGoal = async (update: SavingsGoalUpdate) => {
+    if (formMode === null || isSaving) {
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(false);
 
     try {
-      await updateSavingsGoal(id, update);
+      if (formMode.kind === "create") {
+        await createSavingsGoal(update);
+      } else {
+        await updateSavingsGoal(formMode.id, update);
+      }
       const goals = await fetchSavingsGoals();
       setViewState({ status: "success", goals });
-      setEditingGoalId(null);
+      setFormMode(null);
     } catch {
       setSaveError(true);
     } finally {
@@ -105,13 +121,13 @@ export default function App() {
 
             return (
               <article key={goal.id} className="goal-card">
-                {editingGoalId === goal.id ? (
-                  <SavingsGoalEditForm
+                {formMode?.kind === "edit" && formMode.id === goal.id ? (
+                  <SavingsGoalForm
                     goal={goal}
                     isSaving={isSaving}
                     saveError={saveError}
-                    onSave={(update) => void saveGoal(goal.id, update)}
-                    onCancel={cancelEditing}
+                    onSave={(update) => void saveGoal(update)}
+                    onCancel={closeForm}
                   />
                 ) : (
                   <>
@@ -155,7 +171,7 @@ export default function App() {
                     {projection.status === "unavailable" && (
                       <p className="projection-unavailable">Projection unavailable.</p>
                     )}
-                    <button type="button" onClick={() => startEditing(goal.id)}>
+                    <button type="button" disabled={isSaving} onClick={() => startEditing(goal.id)}>
                       Edit
                     </button>
                   </>
@@ -172,6 +188,24 @@ export default function App() {
     <main className="app-shell">
       <section className="panel">
         <h1>Family Wealth</h1>
+        {viewState.status === "success" && (
+          <div className="create-goal">
+            <button type="button" disabled={isSaving} onClick={startCreating}>
+              Add savings goal
+            </button>
+            {formMode?.kind === "create" && (
+              <section className="goal-card" aria-label="New savings goal">
+                <h2>New savings goal</h2>
+                <SavingsGoalForm
+                  isSaving={isSaving}
+                  saveError={saveError}
+                  onSave={(update) => void saveGoal(update)}
+                  onCancel={closeForm}
+                />
+              </section>
+            )}
+          </div>
+        )}
         {renderContent()}
       </section>
     </main>

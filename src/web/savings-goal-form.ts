@@ -1,3 +1,4 @@
+import type { SavingsGoalRecord } from "../application/savings-goal-contracts.js";
 import type { SavingsGoalUpdate } from "./client/savings-goals.js";
 
 type SavingsGoalFormValues = {
@@ -7,6 +8,16 @@ type SavingsGoalFormValues = {
   targetDate: string;
   expectedReturnPercent: string;
 };
+
+export function initialSavingsGoalFormValues(goal?: SavingsGoalRecord): SavingsGoalFormValues {
+  return {
+    name: goal?.name ?? "",
+    targetAmount: goal ? String(goal.targetAmount) : "",
+    currentAmount: goal ? String(goal.currentAmount) : "0",
+    targetDate: goal ? toDateInputValue(goal.targetDate) : "",
+    expectedReturnPercent: goal ? String(toPercentValue(goal.expectedAnnualReturn)) : "",
+  };
+}
 
 export function parseSavingsGoalForm(values: SavingsGoalFormValues): SavingsGoalUpdate | null {
   const targetAmount = parseFiniteNumber(values.targetAmount);

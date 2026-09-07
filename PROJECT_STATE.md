@@ -6,7 +6,7 @@ Phase 3 - Minimal UI
 
 ## Current increment
 
-Display the combined monthly savings requirement.
+Create a new savings goal from the browser.
 
 ## Completed
 
@@ -52,17 +52,22 @@ Display the combined monthly savings requirement.
 - Added a combined monthly savings summary across all projectable goals.
 - Made the combined value all-or-nothing when any goal is unavailable.
 - Used one shared as-of date for the combined and per-goal projections in each render.
-- Validation gates pass: tests, typecheck, lint, and build.
+- Browser can create savings goals using the existing idempotent PUT contract and a GET refetch.
+- Technical IDs use client-side crypto.randomUUID() and are never displayed or user-editable.
+- Creation and editing reuse one form and conversion path, with only one form open at a time.
+- New persisted goals automatically participate in per-goal and combined savings projections.
+- Verified browser creation, cancel, saving/error states, editing, and persistence after backend restart.
+- Validation gates pass: 91 tests, typecheck, lint, and build.
 
 ## Next
 
-- Add creation of a new savings goal through the existing PUT contract.
+- Add a documented local SQLite backup and restore procedure.
 
 ## Known issues
 
-- Frontend editing is limited to existing demo goals.
-- Goals cannot be created or deleted from the browser yet.
+- No delete capability.
 - Persistence uses one local SQLite database and has no backup strategy yet.
+- No external brokerage integration.
 
 ## Architecture decisions
 

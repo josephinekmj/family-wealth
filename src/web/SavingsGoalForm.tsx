@@ -1,29 +1,30 @@
 import { useState, type FormEvent } from "react";
 import type { SavingsGoalRecord } from "../application/savings-goal-contracts.js";
 import type { SavingsGoalUpdate } from "./client/savings-goals.js";
-import { parseSavingsGoalForm, toDateInputValue, toPercentValue } from "./savings-goal-form.js";
+import { initialSavingsGoalFormValues, parseSavingsGoalForm } from "./savings-goal-form.js";
 
-type SavingsGoalEditFormProps = {
-  goal: SavingsGoalRecord;
+type SavingsGoalFormProps = {
+  goal?: SavingsGoalRecord;
   isSaving: boolean;
   saveError: boolean;
   onSave: (goal: SavingsGoalUpdate) => void;
   onCancel: () => void;
 };
 
-export function SavingsGoalEditForm({
+export function SavingsGoalForm({
   goal,
   isSaving,
   saveError,
   onSave,
   onCancel,
-}: SavingsGoalEditFormProps) {
-  const [name, setName] = useState(goal.name);
-  const [targetAmount, setTargetAmount] = useState(String(goal.targetAmount));
-  const [currentAmount, setCurrentAmount] = useState(String(goal.currentAmount));
-  const [targetDate, setTargetDate] = useState(toDateInputValue(goal.targetDate));
+}: SavingsGoalFormProps) {
+  const [initialValues] = useState(() => initialSavingsGoalFormValues(goal));
+  const [name, setName] = useState(initialValues.name);
+  const [targetAmount, setTargetAmount] = useState(initialValues.targetAmount);
+  const [currentAmount, setCurrentAmount] = useState(initialValues.currentAmount);
+  const [targetDate, setTargetDate] = useState(initialValues.targetDate);
   const [expectedReturnPercent, setExpectedReturnPercent] = useState(
-    String(toPercentValue(goal.expectedAnnualReturn)),
+    initialValues.expectedReturnPercent,
   );
   const [validationError, setValidationError] = useState(false);
 
@@ -54,7 +55,7 @@ export function SavingsGoalEditForm({
         <input value={name} onChange={(event) => setName(event.target.value)} />
       </label>
       <label>
-        Target
+        Target amount
         <input
           type="number"
           step="any"
@@ -63,7 +64,7 @@ export function SavingsGoalEditForm({
         />
       </label>
       <label>
-        Saved
+        Current amount
         <input
           type="number"
           step="any"
@@ -89,7 +90,11 @@ export function SavingsGoalEditForm({
         />
       </label>
       {validationError && <p className="form-error">Enter valid values.</p>}
-      {saveError && <p className="form-error">Could not save savings goal.</p>}
+      {saveError && (
+        <p className="form-error">
+          {goal ? "Could not save savings goal." : "Could not create savings goal."}
+        </p>
+      )}
       <div className="form-actions">
         <button type="submit" disabled={isSaving}>
           {isSaving ? "Saving..." : "Save"}
