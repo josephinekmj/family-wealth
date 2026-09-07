@@ -3,6 +3,11 @@ import { resolve } from "node:path";
 import { buildServer } from "./app.js";
 import { DEMO_SAVINGS_GOALS } from "./demo-savings-goals.js";
 import { SQLiteSavingsGoalRepository } from "../infrastructure/sqlite-savings-goal-repository.js";
+import {
+  InMemorySaxoAuthorizationCodeReceiver,
+  InMemorySaxoOAuthStateStore,
+  loadInvestmentAccountProviderConfiguration,
+} from "../saxo/index.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "127.0.0.1";
@@ -10,6 +15,8 @@ const host = process.env.HOST ?? "127.0.0.1";
 const databasePath = resolve(".data/family-wealth.sqlite");
 const isFirstRun = !existsSync(databasePath);
 const savingsGoalRepository = new SQLiteSavingsGoalRepository(databasePath);
+const investmentAccountProviderConfiguration =
+  loadInvestmentAccountProviderConfiguration(process.env);
 
 if (isFirstRun && (await savingsGoalRepository.findAll()).length === 0) {
   for (const goal of DEMO_SAVINGS_GOALS) {
@@ -17,7 +24,18 @@ if (isFirstRun && (await savingsGoalRepository.findAll()).length === 0) {
   }
 }
 
-const app = buildServer({ savingsGoalRepository });
+const app = buildServer({
+  savingsGoalRepository,
+  ...(investmentAccountProviderConfiguration.provider === "saxo-sim"
+    ? {
+        saxoOAuth: {
+          configuration: investmentAccountProviderConfiguration,
+          stateStore: new InMemorySaxoOAuthStateStore(),
+          authorizationCodeReceiver: new InMemorySaxoAuthorizationCodeReceiver(),
+        },
+      }
+    : {}),
+});
 app.addHook("onClose", async () => {
   savingsGoalRepository.close();
 });

@@ -25,6 +25,67 @@ export interface SaxoAccessTokenProvider {
 	getAccessToken(): Promise<SaxoAccessToken>;
 }
 
+export interface SaxoOAuthStateStore {
+	save(state: string): void;
+	consume(state: string): boolean;
+}
+
+export class InMemorySaxoOAuthStateStore implements SaxoOAuthStateStore {
+	private readonly expiresAtByState = new Map<string, number>();
+
+	constructor(
+		private readonly expirationMs = 10 * 60 * 1000,
+		private readonly now: () => number = Date.now,
+	) {}
+
+	save(state: string): void {
+		const now = this.now();
+		this.removeExpiredStates(now);
+		this.expiresAtByState.set(state, now + this.expirationMs);
+	}
+
+	consume(state: string): boolean {
+		const now = this.now();
+		this.removeExpiredStates(now);
+		const expiresAt = this.expiresAtByState.get(state);
+
+		if (expiresAt === undefined) {
+			return false;
+		}
+
+		this.expiresAtByState.delete(state);
+		return true;
+	}
+
+	private removeExpiredStates(now: number): void {
+		for (const [state, expiresAt] of this.expiresAtByState) {
+			if (expiresAt <= now) {
+				this.expiresAtByState.delete(state);
+			}
+		}
+	}
+}
+
+export interface SaxoAuthorizationCodeReceiver {
+	receive(code: string): Promise<void>;
+}
+
+export class InMemorySaxoAuthorizationCodeReceiver
+	implements SaxoAuthorizationCodeReceiver
+{
+	private authorizationCode: string | undefined;
+
+	async receive(code: string): Promise<void> {
+		this.authorizationCode = code;
+	}
+
+	take(): string | undefined {
+		const code = this.authorizationCode;
+		this.authorizationCode = undefined;
+		return code;
+	}
+}
+
 const requiredEnvironmentValue = (
 	environment: NodeJS.ProcessEnv,
 	name: "SAXO_SIM_APP_KEY" | "SAXO_SIM_APP_SECRET" | "SAXO_SIM_REDIRECT_URI",

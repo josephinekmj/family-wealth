@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev:web": "vite",
-    "dev:server": "tsx src/server/index.ts",
+    "dev:server": "node --env-file-if-exists=.env --import tsx src/server/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
