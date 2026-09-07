@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InvestmentAccountSummary } from "../src/application/investment-account-contracts.js";
 import {
   fetchInvestmentAccounts,
+  fetchInvestmentBalance,
   fetchInvestmentConnectionStatus,
 } from "../src/web/client/investment-accounts.js";
 
@@ -85,5 +86,26 @@ describe("fetchInvestmentConnectionStatus", () => {
     await expect(fetchInvestmentConnectionStatus()).rejects.toThrow(
       "Could not load investment connection status",
     );
+  });
+});
+
+describe("fetchInvestmentBalance", () => {
+  it("uses GET /api/investment-balance and returns its three fields", async () => {
+    const balance = { currency: "DKK", cashBalance: 50_000, totalValue: 100_000 };
+    const fetchMock = vi.fn(async () => Response.json(balance));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    expect(await fetchInvestmentBalance()).toEqual(balance);
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith("/api/investment-balance");
+  });
+
+  it("rejects non-success and malformed responses", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 503 })) as typeof fetch;
+    await expect(fetchInvestmentBalance()).rejects.toThrow("Could not load investment balance");
+
+    globalThis.fetch = vi.fn(async () =>
+      Response.json({ currency: "DKK", cashBalance: "50000", totalValue: 100_000 }),
+    ) as typeof fetch;
+    await expect(fetchInvestmentBalance()).rejects.toThrow("Could not load investment balance");
   });
 });

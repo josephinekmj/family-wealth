@@ -5,3 +5,5 @@ export * from "./savings-goal-queries.js";
 export * from "./savings-goal-commands.js";
 export * from "./investment-account-contracts.js";
 export * from "./investment-account-queries.js";
+export * from "./investment-balance-contracts.js";
+export * from "./investment-balance-queries.js";

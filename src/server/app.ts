@@ -1,16 +1,19 @@
 import Fastify from "fastify";
 import {
   createInvestmentAccountQueries,
+  createInvestmentBalanceQueries,
   createSavingsGoalCommands,
   createSavingsGoalQueries,
   InMemorySavingsGoalRepository,
   mapRecordToSavingsGoalProfile,
   mapSavingsGoalProfileToRecord,
   type InvestmentAccountGateway,
+  type InvestmentBalanceGateway,
   type SavingsGoalRecord,
   type SavingsGoalRepository,
 } from "../application/index.js";
 import { MockInvestmentAccountGateway } from "../infrastructure/mock-investment-account-gateway.js";
+import { MockInvestmentBalanceGateway } from "../infrastructure/mock-investment-balance-gateway.js";
 import {
   buildSaxoSimAuthorizationUrl,
   generateSaxoOAuthState,
@@ -49,6 +52,7 @@ const savingsGoalBodySchema = {
 export type BuildServerDependencies = {
   savingsGoalRepository?: SavingsGoalRepository;
   investmentAccountGateway?: InvestmentAccountGateway;
+  investmentBalanceGateway?: InvestmentBalanceGateway;
   getInvestmentConnectionStatus?: () => InvestmentConnectionStatus;
   saxoOAuth?: {
     configuration: SaxoSimConfiguration;
@@ -78,6 +82,9 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
       { id: "mock-account-1", name: "Investment account", currency: "DKK" },
     ]);
   const investmentAccountQueries = createInvestmentAccountQueries(investmentAccountGateway);
+  const investmentBalanceQueries = createInvestmentBalanceQueries(
+    dependencies.investmentBalanceGateway ?? new MockInvestmentBalanceGateway(),
+  );
 
   app.get("/health", async () => {
     return { status: "ok" };
@@ -104,6 +111,16 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
         status: "connected",
       }
     );
+  });
+
+  app.get("/api/investment-balance", async (_request, reply) => {
+    try {
+      const { currency, cashBalance, totalValue } =
+        await investmentBalanceQueries.getInvestmentBalance();
+      return { currency, cashBalance, totalValue };
+    } catch {
+      return reply.status(503).send({ error: "Investment balance is not available" });
+    }
   });
 
   if (dependencies.saxoOAuth) {

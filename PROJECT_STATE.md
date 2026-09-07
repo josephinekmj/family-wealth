@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Read-only investment connection status.
+Read-only Saxo SIM portfolio balance.
 
 ## Completed
 
@@ -111,11 +111,16 @@ Read-only investment connection status.
 - Added dynamic mock, authenticated Saxo SIM, and unauthenticated Saxo SIM status composition.
 - Updated React to show Demo data, Saxo SIM, or Saxo SIM not connected from backend status.
 - Kept account data and connection status strictly read-only with no authentication details exposed.
-- Validation gates pass: 211 tests, typecheck, lint, and build.
+- Added a provider-neutral client-level investment balance contract and application query.
+- Added deterministic mock balance and read-only Saxo SIM GET /port/v1/balances/me adapters.
+- Shared existing developer/OAuth token providers across account and balance gateways.
+- Added GET /api/investment-balance with three-field success and generic 503 responses.
+- Added independently loaded Total value and Cash balance to the React investment section.
+- Validation gates pass: 243 tests, typecheck, lint, and build.
 
 ## Next
 
-- Manually verify read-only account discovery and the Saxo SIM label using a user-supplied local Developer Portal token.
+- Add isolated read-only Saxo SIM positions behind a provider-neutral investment positions boundary.
 
 ## Known issues
 
@@ -129,7 +134,8 @@ Read-only investment connection status.
 - Refresh occurs only on demand through getAccessToken; there are no timers or background jobs.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
 - Connection status reports only provider source and connected state; it exposes no authentication details.
-- Only account discovery is implemented; there are no balances, positions, ASK detection, or other Saxo OpenAPI resources.
+- Balance is client/portfolio level rather than per-account and exposes only TotalValue and CashBalance.
+- No positions, ASK detection, or other Saxo OpenAPI resources are implemented.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.
 - No financial execution capability.

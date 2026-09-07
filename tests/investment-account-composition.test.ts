@@ -41,6 +41,13 @@ describe("investment account runtime composition", () => {
         { id: "mock-account-1", name: "Investment account", currency: "DKK" },
       ]);
       expect(oauthResponse.statusCode).toBe(404);
+      const balanceResponse = await app.inject({ method: "GET", url: "/api/investment-balance" });
+      expect(balanceResponse.statusCode).toBe(200);
+      expect(balanceResponse.json()).toEqual({
+        currency: "DKK",
+        cashBalance: 50_000,
+        totalValue: 100_000,
+      });
     } finally {
       await app.close();
     }
@@ -92,7 +99,15 @@ describe("investment account runtime composition", () => {
     );
     const runtime = composeInvestmentAccountRuntime(
       { provider: "saxo-sim", developerAccessToken: "test-developer-token" },
-      { accountFetch },
+      {
+        accountFetch,
+        balanceFetch: async (_input, init) => {
+          expect(new Headers(init?.headers).get("Authorization")).toBe(
+            "Bearer test-developer-token",
+          );
+          return jsonResponse({ Currency: "EUR", CashBalance: 500, TotalValue: 1_000 });
+        },
+      },
     );
     const app = buildServer(runtime);
 
@@ -127,6 +142,12 @@ describe("investment account runtime composition", () => {
       );
       expect(startResponse.statusCode).toBe(404);
       expect(callbackResponse.statusCode).toBe(404);
+      const balanceResponse = await app.inject({ method: "GET", url: "/api/investment-balance" });
+      expect(balanceResponse.json()).toEqual({
+        currency: "EUR",
+        cashBalance: 500,
+        totalValue: 1_000,
+      });
       expect(accountFetch).toHaveBeenCalledOnce();
       expect(new Headers(accountFetch.mock.calls[0]![1]?.headers).get("Authorization")).toBe(
         "Bearer test-developer-token",
@@ -186,6 +207,12 @@ describe("investment account runtime composition", () => {
     const runtime = composeInvestmentAccountRuntime(simConfiguration, {
       tokenFetch,
       accountFetch,
+      balanceFetch: async (_input, init) => {
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer test-access-token",
+        );
+        return jsonResponse({ Currency: "DKK", CashBalance: 750, TotalValue: 1_500 });
+      },
       generateState: () => "shared-state",
     });
     const app = buildServer(runtime);
@@ -226,6 +253,31 @@ describe("investment account runtime composition", () => {
       expect(new Headers(accountFetch.mock.calls[0]![1]?.headers).get("Authorization")).toBe(
         "Bearer test-access-token",
       );
+      const balanceResponse = await app.inject({ method: "GET", url: "/api/investment-balance" });
+      expect(balanceResponse.json()).toEqual({
+        currency: "DKK",
+        cashBalance: 750,
+        totalValue: 1_500,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns a safe balance failure before OAuth authentication", async () => {
+    const runtime = composeInvestmentAccountRuntime(simConfiguration, {
+      tokenFetch: async () => jsonResponse({}),
+      accountFetch: async () => jsonResponse({ Data: [] }),
+      balanceFetch: async () => jsonResponse({ Currency: "DKK", CashBalance: 0, TotalValue: 0 }),
+    });
+    const app = buildServer(runtime);
+
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/investment-balance" });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({ error: "Investment balance is not available" });
+      expect(response.body).not.toMatch(/token|secret|authentication/i);
     } finally {
       await app.close();
     }
