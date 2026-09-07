@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 5 - Mock investment integration
+Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Display read-only mock investment accounts in React.
+Saxo SIM configuration and authentication boundary.
 
 ## Completed
 
@@ -73,11 +73,15 @@ Display read-only mock investment accounts in React.
 - Added independent account loading, error, and empty states in a focused React section.
 - Added read-only account names/currencies with a Demo data label, completing the React-to-mock-adapter vertical slice.
 - Verified account rendering states and savings create/edit/projection regression in Chrome.
-- Validation gates pass: 111 tests, typecheck, lint, and build.
+- Added fail-closed investment provider configuration with Mock as the default and Saxo SIM as the only external option.
+- Added backend-only Saxo SIM credential validation and fixed SIM authorization, token, and API endpoints.
+- Added an access-token provider interface without implementing OAuth, token persistence, or network calls.
+- Expanded environment-file ignores so local credential variants cannot be committed accidentally.
+- Validation gates pass: 120 tests, typecheck, lint, and build.
 
 ## Next
 
-- Introduce a Saxo SIM configuration/authentication boundary while retaining the Mock adapter as the default and without any LIVE capability.
+- Implement a backend-only Saxo SIM OAuth authorization-code flow behind the access-token provider boundary, without changing the Mock default.
 
 ## Known issues
 
@@ -85,7 +89,8 @@ Display read-only mock investment accounts in React.
 - Backup is manual and requires stopping the backend.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
-- Investment accounts use mock data only; no Saxo SIM, network integration, or OAuth.
+- Investment accounts use mock data only; Saxo SIM configuration is not wired into runtime composition.
+- No Saxo OAuth implementation, token persistence, or external network integration exists.
 - No real account balances or positions.
 - No financial execution capability.
 
@@ -97,10 +102,12 @@ Display read-only mock investment accounts in React.
 - Keep SQLite behind SavingsGoalRepository and share one runtime adapter instance across reads and writes.
 - Keep combined savings requirements derived from existing projections and never persist them.
 - Keep investment account queries provider-neutral behind InvestmentAccountGateway, with adapters in infrastructure.
+- Keep Saxo authentication behind SaxoAccessTokenProvider and expose SIM endpoints only.
 
 ## Security decisions
 
 - SAXO secrets are backend-only and excluded from git via .env patterns.
+- Reject every investment provider other than Mock and Saxo SIM; no LIVE endpoint or mode exists.
 - No external financial transaction or execution capability exists.
 - HTTP goal writes are limited to validated local planning data and expose no internal errors.
 - Keep the local database and all SQLite sidecar files outside Git through the ignored .data directory.
