@@ -3,8 +3,18 @@ import {
   SAXO_SIM_API_BASE_URL,
   SAXO_SIM_AUTHORIZATION_URL,
   SAXO_SIM_TOKEN_URL,
+  buildSaxoSimAuthorizationUrl,
+  generateSaxoOAuthState,
   loadInvestmentAccountProviderConfiguration,
+  type SaxoSimConfiguration,
 } from "../src/saxo/index.js";
+
+const simConfiguration: SaxoSimConfiguration = {
+  provider: "saxo-sim",
+  clientId: "test-client-id",
+  clientSecret: "test-client-secret",
+  redirectUri: "http://127.0.0.1:3000/auth/saxo/callback",
+};
 
 describe("Saxo SIM configuration", () => {
   it("uses the mock provider when no provider is configured", () => {
@@ -15,26 +25,62 @@ describe("Saxo SIM configuration", () => {
     expect(
       loadInvestmentAccountProviderConfiguration({
         SAXO_MODE: "saxo-sim",
-        SAXO_APP_KEY: "test-client-id",
-        SAXO_APP_SECRET: "test-client-secret",
-        SAXO_REDIRECT_URI: "http://127.0.0.1:3000/auth/saxo/callback",
+        SAXO_SIM_APP_KEY: "test-client-id",
+        SAXO_SIM_APP_SECRET: "test-client-secret",
+        SAXO_SIM_REDIRECT_URI: "http://127.0.0.1:3000/auth/saxo/callback",
       }),
-    ).toEqual({
+    ).toEqual(simConfiguration);
+  });
+
+  it("accepts and normalizes an HTTPS redirect URI", () => {
+    const configuration = loadInvestmentAccountProviderConfiguration({
+      SAXO_MODE: "saxo-sim",
+      SAXO_SIM_APP_KEY: "test-client-id",
+      SAXO_SIM_APP_SECRET: "test-client-secret",
+      SAXO_SIM_REDIRECT_URI: "https://example.test/oauth/callback",
+    });
+
+    expect(configuration).toMatchObject({
       provider: "saxo-sim",
-      clientId: "test-client-id",
-      clientSecret: "test-client-secret",
-      redirectUri: "http://127.0.0.1:3000/auth/saxo/callback",
+      redirectUri: "https://example.test/oauth/callback",
     });
   });
 
-  it.each(["SAXO_APP_KEY", "SAXO_APP_SECRET", "SAXO_REDIRECT_URI"])(
+  it.each(["not a URI", "://missing-scheme.example"])(
+    "rejects malformed redirect URI %s without exposing the secret",
+    (redirectUri) => {
+      const loadConfiguration = () =>
+        loadInvestmentAccountProviderConfiguration({
+          SAXO_MODE: "saxo-sim",
+          SAXO_SIM_APP_KEY: "test-client-id",
+          SAXO_SIM_APP_SECRET: "private-client-secret",
+          SAXO_SIM_REDIRECT_URI: redirectUri,
+        });
+
+      expect(loadConfiguration).toThrow("SAXO_SIM_REDIRECT_URI");
+      expect(loadConfiguration).not.toThrow("private-client-secret");
+    },
+  );
+
+  it("rejects a redirect URI with an unsupported protocol", () => {
+    expect(() =>
+      loadInvestmentAccountProviderConfiguration({
+        SAXO_MODE: "saxo-sim",
+        SAXO_SIM_APP_KEY: "test-client-id",
+        SAXO_SIM_APP_SECRET: "private-client-secret",
+        SAXO_SIM_REDIRECT_URI: "ftp://example.test/oauth/callback",
+      }),
+    ).toThrow("must use HTTP or HTTPS");
+  });
+
+  it.each(["SAXO_SIM_APP_KEY", "SAXO_SIM_APP_SECRET", "SAXO_SIM_REDIRECT_URI"])(
     "rejects a missing %s without exposing configured secrets",
     (missingName) => {
       const environment: NodeJS.ProcessEnv = {
         SAXO_MODE: "saxo-sim",
-        SAXO_APP_KEY: "private-client-id",
-        SAXO_APP_SECRET: "private-client-secret",
-        SAXO_REDIRECT_URI: "http://127.0.0.1:3000/auth/saxo/callback",
+        SAXO_SIM_APP_KEY: "private-client-id",
+        SAXO_SIM_APP_SECRET: "private-client-secret",
+        SAXO_SIM_REDIRECT_URI: "http://127.0.0.1:3000/auth/saxo/callback",
       };
       delete environment[missingName];
 
@@ -55,5 +101,46 @@ describe("Saxo SIM configuration", () => {
     expect(SAXO_SIM_AUTHORIZATION_URL).toContain("sim.logonvalidation.net");
     expect(SAXO_SIM_TOKEN_URL).toContain("sim.logonvalidation.net");
     expect(SAXO_SIM_API_BASE_URL).toContain("/sim/openapi");
+  });
+});
+
+describe("Saxo SIM authorization URL", () => {
+  it("builds an authorization request containing only the required values", () => {
+    const state = "state_value-123";
+    const authorizationUrl = new URL(buildSaxoSimAuthorizationUrl(simConfiguration, state));
+
+    expect(`${authorizationUrl.origin}${authorizationUrl.pathname}`).toBe(
+      SAXO_SIM_AUTHORIZATION_URL,
+    );
+    expect(authorizationUrl.searchParams.get("response_type")).toBe("code");
+    expect(authorizationUrl.searchParams.get("client_id")).toBe(simConfiguration.clientId);
+    expect(authorizationUrl.searchParams.get("state")).toBe(state);
+    expect(authorizationUrl.searchParams.get("redirect_uri")).toBe(
+      simConfiguration.redirectUri,
+    );
+    expect(authorizationUrl.searchParams.has("scope")).toBe(false);
+    expect(authorizationUrl.toString()).not.toContain(simConfiguration.clientSecret);
+    expect([...authorizationUrl.searchParams.keys()].sort()).toEqual([
+      "client_id",
+      "redirect_uri",
+      "response_type",
+      "state",
+    ]);
+  });
+
+  it.each(["", " ", "\t\n"])("rejects blank state %j", (state) => {
+    expect(() => buildSaxoSimAuthorizationUrl(simConfiguration, state)).toThrow(
+      "OAuth state must not be blank",
+    );
+  });
+});
+
+describe("Saxo OAuth state", () => {
+  it("generates nonempty URL-safe state", () => {
+    expect(generateSaxoOAuthState()).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it("generates different values", () => {
+    expect(generateSaxoOAuthState()).not.toBe(generateSaxoOAuthState());
   });
 });

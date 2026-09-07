@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Saxo SIM configuration and authentication boundary.
+Complete Saxo SIM OAuth authorization boundary.
 
 ## Completed
 
@@ -77,11 +77,15 @@ Saxo SIM configuration and authentication boundary.
 - Added backend-only Saxo SIM credential validation and fixed SIM authorization, token, and API endpoints.
 - Added an access-token provider interface without implementing OAuth, token persistence, or network calls.
 - Expanded environment-file ignores so local credential variants cannot be committed accidentally.
-- Validation gates pass: 120 tests, typecheck, lint, and build.
+- Replaced generic Saxo credential variables with SIM-specific environment names.
+- Added HTTP/HTTPS redirect URI parsing and normalization for Saxo SIM configuration.
+- Added pure Saxo SIM authorization URL construction without scopes or secret exposure.
+- Added cryptographically secure, URL-safe OAuth state generation using node:crypto.
+- Validation gates pass: 130 tests, typecheck, lint, and build.
 
 ## Next
 
-- Implement a backend-only Saxo SIM OAuth authorization-code flow behind the access-token provider boundary, without changing the Mock default.
+- Implement local Saxo SIM OAuth start and callback routes with one-time state storage/validation and authorization-code capture, stopping before token exchange.
 
 ## Known issues
 
@@ -90,7 +94,8 @@ Saxo SIM configuration and authentication boundary.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
 - Investment accounts use mock data only; Saxo SIM configuration is not wired into runtime composition.
-- No Saxo OAuth implementation, token persistence, or external network integration exists.
+- No OAuth routes, callback handling, authorization-code exchange, token persistence, or Saxo API calls exist.
+- No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.
 - No financial execution capability.
 

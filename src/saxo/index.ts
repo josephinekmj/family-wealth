@@ -1,16 +1,20 @@
+import { randomBytes } from "node:crypto";
+
 export const SAXO_SIM_AUTHORIZATION_URL =
 	"https://sim.logonvalidation.net/authorize";
 export const SAXO_SIM_TOKEN_URL = "https://sim.logonvalidation.net/token";
 export const SAXO_SIM_API_BASE_URL = "https://gateway.saxobank.com/sim/openapi";
 
+export type SaxoSimConfiguration = {
+	provider: "saxo-sim";
+	clientId: string;
+	clientSecret: string;
+	redirectUri: string;
+};
+
 export type InvestmentAccountProviderConfiguration =
 	| { provider: "mock" }
-	| {
-			provider: "saxo-sim";
-			clientId: string;
-			clientSecret: string;
-			redirectUri: string;
-		};
+	| SaxoSimConfiguration;
 
 export type SaxoAccessToken = {
 	value: string;
@@ -23,7 +27,7 @@ export interface SaxoAccessTokenProvider {
 
 const requiredEnvironmentValue = (
 	environment: NodeJS.ProcessEnv,
-	name: "SAXO_APP_KEY" | "SAXO_APP_SECRET" | "SAXO_REDIRECT_URI",
+	name: "SAXO_SIM_APP_KEY" | "SAXO_SIM_APP_SECRET" | "SAXO_SIM_REDIRECT_URI",
 ): string => {
 	const value = environment[name]?.trim();
 
@@ -32,6 +36,22 @@ const requiredEnvironmentValue = (
 	}
 
 	return value;
+};
+
+const validatedRedirectUri = (value: string): string => {
+	let redirectUrl: URL;
+
+	try {
+		redirectUrl = new URL(value);
+	} catch {
+		throw new Error("SAXO_SIM_REDIRECT_URI must be a valid HTTP or HTTPS URL");
+	}
+
+	if (redirectUrl.protocol !== "http:" && redirectUrl.protocol !== "https:") {
+		throw new Error("SAXO_SIM_REDIRECT_URI must use HTTP or HTTPS");
+	}
+
+	return redirectUrl.toString();
 };
 
 export const loadInvestmentAccountProviderConfiguration = (
@@ -49,8 +69,31 @@ export const loadInvestmentAccountProviderConfiguration = (
 
 	return {
 		provider: "saxo-sim",
-		clientId: requiredEnvironmentValue(environment, "SAXO_APP_KEY"),
-		clientSecret: requiredEnvironmentValue(environment, "SAXO_APP_SECRET"),
-		redirectUri: requiredEnvironmentValue(environment, "SAXO_REDIRECT_URI"),
+		clientId: requiredEnvironmentValue(environment, "SAXO_SIM_APP_KEY"),
+		clientSecret: requiredEnvironmentValue(environment, "SAXO_SIM_APP_SECRET"),
+		redirectUri: validatedRedirectUri(
+			requiredEnvironmentValue(environment, "SAXO_SIM_REDIRECT_URI"),
+		),
 	};
 };
+
+export const buildSaxoSimAuthorizationUrl = (
+	configuration: SaxoSimConfiguration,
+	state: string,
+): string => {
+	if (!state.trim()) {
+		throw new Error("OAuth state must not be blank");
+	}
+
+	const authorizationUrl = new URL(SAXO_SIM_AUTHORIZATION_URL);
+	authorizationUrl.search = new URLSearchParams({
+		response_type: "code",
+		client_id: configuration.clientId,
+		state,
+		redirect_uri: configuration.redirectUri,
+	}).toString();
+
+	return authorizationUrl.toString();
+};
+
+export const generateSaxoOAuthState = (): string => randomBytes(32).toString("base64url");
