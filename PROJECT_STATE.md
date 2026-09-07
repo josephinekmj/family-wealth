@@ -6,7 +6,7 @@ Phase 3 - Minimal UI
 
 ## Current increment
 
-Local SQLite backup and restore procedure.
+Mock investment account gateway boundary.
 
 ## Completed
 
@@ -61,11 +61,15 @@ Local SQLite backup and restore procedure.
 - Documented restore with a verified safety copy of the current database before replacement.
 - Verified round-trip recovery using disposable generic data: stopped backup, mutation, stopped restore, and restart.
 - Confirmed the restored state through GET /api/goals and browser goals/projections.
-- Validation gates pass: 91 tests, typecheck, lint, and build.
+- Added a generic InvestmentAccountGateway with read-only account summaries.
+- Added a read-only investment account query that depends only on the gateway interface.
+- Added a mock adapter with constructor seed isolation and safe copies on every read.
+- Added contract/query tests covering delegation, empty results, failures, and mutation isolation.
+- Validation gates pass: 100 tests, typecheck, lint, and build.
 
 ## Next
 
-- Introduce a Mock Saxo adapter behind an InvestmentAccountGateway boundary, without real Saxo credentials or network calls.
+- Expose the existing read-only investment account query through one local GET endpoint using the Mock gateway.
 
 ## Known issues
 
@@ -73,6 +77,9 @@ Local SQLite backup and restore procedure.
 - Backup is manual and requires stopping the backend.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
+- Investment accounts use mock data only; no Saxo network integration or OAuth.
+- No investment account UI.
+- No financial execution capability.
 
 ## Architecture decisions
 
@@ -81,6 +88,7 @@ Local SQLite backup and restore procedure.
 - Use PUT /api/goals/:id for idempotent full-record upserts with the ID sourced only from the URL.
 - Keep SQLite behind SavingsGoalRepository and share one runtime adapter instance across reads and writes.
 - Keep combined savings requirements derived from existing projections and never persist them.
+- Keep investment account queries provider-neutral behind InvestmentAccountGateway, with adapters in infrastructure.
 
 ## Security decisions
 
