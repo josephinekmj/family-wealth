@@ -38,11 +38,13 @@ type SaxoTokenState = {
 };
 
 const tokenExchangeError = (): Error => new Error("Saxo SIM token exchange failed");
+const tokenRefreshError = (): Error => new Error("Saxo SIM token refresh failed");
 
 export class SaxoSimAccessTokenProvider
 	implements SaxoAccessTokenProvider, SaxoAuthorizationCodeReceiver
 {
 	private tokenState: SaxoTokenState | undefined;
+	private refreshInFlight: Promise<void> | undefined;
 
 	constructor(
 		private readonly configuration: SaxoSimConfiguration,
@@ -56,45 +58,94 @@ export class SaxoSimAccessTokenProvider
 		}
 
 		try {
-			const response = await this.fetchRequest(SAXO_SIM_TOKEN_URL, {
-				method: "POST",
-				headers: {
-					Authorization: `Basic ${Buffer.from(
-						`${this.configuration.clientId}:${this.configuration.clientSecret}`,
-						"utf8",
-					).toString("base64")}`,
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-				body: new URLSearchParams({
+			this.tokenState = await this.requestToken(
+				new URLSearchParams({
 					grant_type: "authorization_code",
 					code,
 					redirect_uri: this.configuration.redirectUri,
 				}),
-			});
-
-			if (!response.ok) {
-				throw tokenExchangeError();
-			}
-
-			const tokenResponse: unknown = await response.json();
-			this.tokenState = this.parseTokenResponse(tokenResponse);
+				false,
+			);
 		} catch {
 			throw tokenExchangeError();
 		}
 	}
 
 	async getAccessToken(): Promise<SaxoAccessToken> {
+		const now = this.now();
+
+		if (this.tokenState && this.tokenState.accessTokenExpiresAt > now) {
+			return this.toAccessToken(this.tokenState);
+		}
+
+		if (
+			!this.tokenState?.refreshToken ||
+			(this.tokenState.refreshTokenExpiresAt !== undefined &&
+				this.tokenState.refreshTokenExpiresAt <= now)
+		) {
+			throw new Error("Saxo access token is unavailable");
+		}
+
+		if (!this.refreshInFlight) {
+			const refreshToken = this.tokenState.refreshToken;
+			this.refreshInFlight = this.refreshAccessToken(refreshToken).finally(() => {
+				this.refreshInFlight = undefined;
+			});
+		}
+
+		await this.refreshInFlight;
+
 		if (!this.tokenState || this.tokenState.accessTokenExpiresAt <= this.now()) {
 			throw new Error("Saxo access token is unavailable");
 		}
 
-		return {
-			value: this.tokenState.accessToken,
-			expiresAt: new Date(this.tokenState.accessTokenExpiresAt),
-		};
+		return this.toAccessToken(this.tokenState);
 	}
 
-	private parseTokenResponse(value: unknown): SaxoTokenState {
+	private async refreshAccessToken(refreshToken: string): Promise<void> {
+		try {
+			const nextTokenState = await this.requestToken(
+				new URLSearchParams({
+					grant_type: "refresh_token",
+					refresh_token: refreshToken,
+				}),
+				true,
+			);
+
+			this.tokenState = nextTokenState;
+		} catch {
+			throw tokenRefreshError();
+		}
+	}
+
+	private async requestToken(
+		body: URLSearchParams,
+		requireRefreshToken: boolean,
+	): Promise<SaxoTokenState> {
+		const response = await this.fetchRequest(SAXO_SIM_TOKEN_URL, {
+			method: "POST",
+			headers: {
+				Authorization: `Basic ${Buffer.from(
+					`${this.configuration.clientId}:${this.configuration.clientSecret}`,
+					"utf8",
+				).toString("base64")}`,
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body,
+		});
+
+		if (!response.ok) {
+			throw tokenExchangeError();
+		}
+
+		const tokenResponse: unknown = await response.json();
+		return this.parseTokenResponse(tokenResponse, requireRefreshToken);
+	}
+
+	private parseTokenResponse(
+		value: unknown,
+		requireRefreshToken: boolean,
+	): SaxoTokenState {
 		if (typeof value !== "object" || value === null) {
 			throw tokenExchangeError();
 		}
@@ -119,8 +170,9 @@ export class SaxoSimAccessTokenProvider
 		}
 
 		if (
-			refreshToken !== undefined &&
-			(typeof refreshToken !== "string" || !refreshToken.trim())
+			(requireRefreshToken && refreshToken === undefined) ||
+			(refreshToken !== undefined &&
+				(typeof refreshToken !== "string" || !refreshToken.trim()))
 		) {
 			throw tokenExchangeError();
 		}
@@ -146,6 +198,13 @@ export class SaxoSimAccessTokenProvider
 			...(refreshTokenExpiresIn === undefined
 				? {}
 				: { refreshTokenExpiresAt: now + refreshTokenExpiresIn * 1000 }),
+		};
+	}
+
+	private toAccessToken(tokenState: SaxoTokenState): SaxoAccessToken {
+		return {
+			value: tokenState.accessToken,
+			expiresAt: new Date(tokenState.accessTokenExpiresAt),
 		};
 	}
 }

@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Saxo SIM authorization-code token exchange.
+Memory-only Saxo SIM refresh-token rotation.
 
 ## Completed
 
@@ -91,11 +91,15 @@ Saxo SIM authorization-code token exchange.
 - Added strict token response validation with memory-only access and optional refresh-token state.
 - Added a concrete SaxoAccessTokenProvider with deterministic access-token expiry handling.
 - Wired the callback receiver to token exchange without changing the mock investment account gateway.
-- Validation gates pass: 161 tests, typecheck, lint, and build.
+- Added on-demand refresh-token exchange when the current access token is expired.
+- Added atomic access/refresh token rotation after complete response validation.
+- Added refresh-token expiry checks and one-request coalescing for concurrent access callers.
+- Kept prior token state intact when refresh transport or validation fails.
+- Validation gates pass: 168 tests, typecheck, lint, and build.
 
 ## Next
 
-- Implement memory-only Saxo SIM refresh-token rotation behind SaxoAccessTokenProvider, still without calling investment-account endpoints.
+- Introduce a read-only Saxo SIM InvestmentAccountGateway behind explicit runtime selection, with Mock remaining the default and no financial writes.
 
 ## Known issues
 
@@ -105,7 +109,7 @@ Saxo SIM authorization-code token exchange.
 - No external brokerage integration.
 - Investment accounts use mock data only; Saxo SIM OAuth does not select an account gateway.
 - Access and optional refresh tokens are process-local and disappear on restart.
-- Refresh-token exchange and automatic refresh are not implemented.
+- Refresh occurs only on demand through getAccessToken; there are no timers or background jobs.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
 - No Saxo OpenAPI account calls exist.
 - No Saxo LIVE configuration or integration exists.
