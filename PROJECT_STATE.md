@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Read-only Saxo SIM investment positions.
+Read-only Saxo SIM instrument-reference enrichment.
 
 ## Completed
 
@@ -121,11 +121,16 @@ Read-only Saxo SIM investment positions.
 - Added opaque position IDs, fail-closed mapping, and deterministic mock positions.
 - Shared existing developer/OAuth token providers across account, balance, and positions gateways.
 - Added GET /api/investment-positions and an independently loaded minimal positions UI.
-- Validation gates pass: 287 tests, typecheck, lint, and build.
+- Added private Uic and AssetType instrument-detail lookup for known portfolio positions.
+- Mapped Saxo Description and Symbol to provider-neutral instrumentName and symbol fields.
+- Added request-scoped unique-instrument deduplication with sequential reference lookups.
+- Added graceful null metadata fallback without weakening strict core position validation.
+- Enriched the positions API and UI while keeping every provider identifier private.
+- Validation gates pass: 306 tests, typecheck, lint, and build.
 
 ## Next
 
-- Add isolated read-only Saxo instrument-reference lookup so positions can map Uic and AssetType to a user-friendly symbol/name without exposing provider identifiers.
+- Evaluate ASK and account capability detection using Saxo account/reference data without adding write capability.
 
 ## Known issues
 
@@ -140,7 +145,8 @@ Read-only Saxo SIM investment positions.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
 - Connection status reports only provider source and connected state; it exposes no authentication details.
 - Balance is client/portfolio level rather than per-account and exposes only TotalValue and CashBalance.
-- Positions expose asset type and numeric values only; there are no instrument names, tickers, or per-account filtering.
+- Instrument enrichment adds one sequential request per unique instrument with no persistent cache.
+- Symbols are shown as supplied by Saxo; there is no instrument search or per-account position filtering.
 - No ASK detection or other Saxo OpenAPI resources are implemented.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.

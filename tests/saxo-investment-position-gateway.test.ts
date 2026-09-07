@@ -3,6 +3,8 @@ import type { SaxoAccessTokenProvider } from "../src/saxo/index.js";
 import { SaxoInvestmentPositionGateway } from "../src/saxo/saxo-investment-position-gateway.js";
 
 const positionsUrl = "https://gateway.saxobank.com/sim/openapi/port/v1/positions/me";
+const instrumentUrl = (uic: number, assetType: string) =>
+  `https://gateway.saxobank.com/sim/openapi/ref/v1/instruments/details/${uic}/${encodeURIComponent(assetType)}`;
 
 const accessTokenProvider = (value = "test-access-token") => {
   const getAccessToken = vi.fn(async () => ({ value, expiresAt: null }));
@@ -70,6 +72,8 @@ describe("SaxoInvestmentPositionGateway", () => {
     expect(positions).toEqual([
       {
         id: expect.stringMatching(/^saxo-[a-f0-9]{64}$/),
+        instrumentName: null,
+        symbol: null,
         assetType: "Stock",
         amount: 10,
         currentPrice: 100,
@@ -78,6 +82,8 @@ describe("SaxoInvestmentPositionGateway", () => {
       },
       {
         id: expect.stringMatching(/^saxo-[a-f0-9]{64}$/),
+        instrumentName: null,
+        symbol: null,
         assetType: "Bond",
         amount: -2,
         currentPrice: 0,
@@ -96,6 +102,162 @@ describe("SaxoInvestmentPositionGateway", () => {
       "exposure",
       "exposureCurrency",
       "id",
+      "instrumentName",
+      "symbol",
+    ]);
+  });
+
+  it("enriches a position from the exact safely encoded instrument endpoint", async () => {
+    const { provider, getAccessToken } = accessTokenProvider();
+    const fetchRequest = vi.fn<
+      (input: string | URL, init?: RequestInit) => Promise<Response>
+    >(async (input) => {
+      const url = input.toString();
+      if (url === positionsUrl) {
+        return jsonResponse({
+          Data: [
+            position({
+              PositionBase: { Amount: 10, AssetType: "Stock/Index", Uic: 12345 },
+            }),
+          ],
+        });
+      }
+      if (url === instrumentUrl(12345, "Stock/Index")) {
+        return jsonResponse({
+          Uic: 12345,
+          AssetType: "Stock/Index",
+          Description: "  Example Company  ",
+          Symbol: "  EXAMPLE:XCSE  ",
+        });
+      }
+      throw new Error("Unexpected URL");
+    });
+    const gateway = new SaxoInvestmentPositionGateway(provider, fetchRequest);
+
+    const positions = await gateway.listPositions();
+
+    expect(positions[0]).toMatchObject({
+      instrumentName: "Example Company",
+      symbol: "EXAMPLE:XCSE",
+      assetType: "Stock/Index",
+    });
+    expect(fetchRequest).toHaveBeenCalledTimes(2);
+    const [lookupUrl, lookupInit] = fetchRequest.mock.calls[1]!;
+    const lookupHeaders = new Headers(lookupInit?.headers);
+    expect(lookupUrl).toBe(instrumentUrl(12345, "Stock/Index"));
+    expect(new URL(lookupUrl).search).toBe("");
+    expect(lookupInit?.method).toBe("GET");
+    expect(lookupInit?.body).toBeUndefined();
+    expect(lookupHeaders.get("Authorization")).toBe("Bearer test-access-token");
+    expect(lookupHeaders.get("Authorization")).not.toContain("Basic");
+    expect(lookupUrl.toString()).not.toMatch(/AccountKey|ClientKey|FieldGroups/);
+    expect(getAccessToken).toHaveBeenCalledOnce();
+    expect(JSON.stringify(positions)).not.toMatch(/12345|Uic|PositionId|NetPositionId/);
+  });
+
+  it.each([
+    ["404", jsonResponse({ error: "not-found" }, 404)],
+    ["500", jsonResponse({ error: "raw-saxo-error" }, 500)],
+    ["invalid JSON", new Response("not-json", { status: 200 })],
+    ["blank description", jsonResponse({ Description: " ", Symbol: "EXAMPLE" })],
+    ["blank symbol", jsonResponse({ Description: "Example Company", Symbol: " " })],
+    [
+      "Uic mismatch",
+      jsonResponse({ Uic: 99999, AssetType: "Stock", Description: "Example", Symbol: "EX" }),
+    ],
+    [
+      "AssetType mismatch",
+      jsonResponse({ Uic: 12345, AssetType: "Bond", Description: "Example", Symbol: "EX" }),
+    ],
+  ])("returns null metadata for %s instrument response", async (_name, lookupResponse) => {
+    const { provider } = accessTokenProvider("sensitive-access-token");
+    const fetchRequest = vi
+      .fn<(input: string | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({ Data: [position()] }))
+      .mockResolvedValueOnce(lookupResponse);
+    const gateway = new SaxoInvestmentPositionGateway(provider, fetchRequest);
+
+    const positions = await gateway.listPositions();
+
+    expect(positions).toMatchObject([{ instrumentName: null, symbol: null }]);
+    expect(JSON.stringify(positions)).not.toMatch(
+      /sensitive-access-token|raw-saxo-error|not-found|99999/,
+    );
+  });
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, "12345", undefined])(
+    "does not construct an instrument URL for invalid Uic %j",
+    async (uic) => {
+      const { provider } = accessTokenProvider();
+      const fetchRequest = vi.fn(async () =>
+        jsonResponse({
+          Data: [position({ PositionBase: { Amount: 1, AssetType: "Stock", Uic: uic } })],
+        }),
+      );
+      const gateway = new SaxoInvestmentPositionGateway(provider, fetchRequest);
+
+      await expect(gateway.listPositions()).resolves.toMatchObject([
+        { instrumentName: null, symbol: null },
+      ]);
+      expect(fetchRequest).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("deduplicates repeated instruments within one list operation only", async () => {
+    const { provider } = accessTokenProvider();
+    const fetchRequest = vi.fn(async (input: string | URL) => {
+      if (input.toString() === positionsUrl) {
+        return jsonResponse({
+          Data: [
+            position({ PositionId: "position-1" }),
+            position({ PositionId: "position-2" }),
+          ],
+        });
+      }
+      return jsonResponse({
+        Uic: 12345,
+        AssetType: "Stock",
+        Description: "Example Company",
+        Symbol: "EXAMPLE",
+      });
+    });
+    const gateway = new SaxoInvestmentPositionGateway(provider, fetchRequest);
+
+    await gateway.listPositions();
+    expect(fetchRequest).toHaveBeenCalledTimes(2);
+    await gateway.listPositions();
+    expect(fetchRequest).toHaveBeenCalledTimes(4);
+  });
+
+  it("looks up different Uic or AssetType pairs separately", async () => {
+    const { provider } = accessTokenProvider();
+    const fetchRequest = vi.fn(async (input: string | URL) => {
+      if (input.toString() === positionsUrl) {
+        return jsonResponse({
+          Data: [
+            position({ PositionId: "position-1" }),
+            position({
+              PositionId: "position-2",
+              PositionBase: { Amount: 1, AssetType: "Stock", Uic: 67890 },
+            }),
+            position({
+              PositionId: "position-3",
+              PositionBase: { Amount: 1, AssetType: "Bond", Uic: 12345 },
+            }),
+          ],
+        });
+      }
+      return jsonResponse({ Description: "Example", Symbol: "EXAMPLE" });
+    });
+    const gateway = new SaxoInvestmentPositionGateway(provider, fetchRequest);
+
+    await gateway.listPositions();
+
+    expect(fetchRequest).toHaveBeenCalledTimes(4);
+    expect(fetchRequest.mock.calls.slice(1).map(([url]) => url)).toEqual([
+      instrumentUrl(12345, "Stock"),
+      instrumentUrl(67890, "Stock"),
+      instrumentUrl(12345, "Bond"),
     ]);
   });
 

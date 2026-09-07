@@ -14,6 +14,8 @@ describe("fetchInvestmentPositions", () => {
     const positions: InvestmentPositionSummary[] = [
       {
         id: "opaque-position",
+        instrumentName: "Example Company",
+        symbol: "EXAMPLE",
         assetType: "Stock",
         amount: 10,
         currentPrice: 100,

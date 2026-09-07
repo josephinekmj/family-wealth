@@ -56,6 +56,8 @@ describe("investment account runtime composition", () => {
       expect(positionsResponse.json()).toEqual([
         {
           id: "mock-position-1",
+          instrumentName: "Example Company",
+          symbol: "EXAMPLE",
           assetType: "Stock",
           amount: 10,
           currentPrice: 100,
@@ -122,10 +124,18 @@ describe("investment account runtime composition", () => {
           );
           return jsonResponse({ Currency: "EUR", CashBalance: 500, TotalValue: 1_000 });
         },
-        positionFetch: async (_input, init) => {
+        positionFetch: async (input, init) => {
           expect(new Headers(init?.headers).get("Authorization")).toBe(
             "Bearer test-developer-token",
           );
+          if (input.toString().includes("/ref/v1/instruments/details/")) {
+            return jsonResponse({
+              Uic: 12345,
+              AssetType: "Stock",
+              Description: "Developer Example Company",
+              Symbol: "DEVEX",
+            });
+          }
           return jsonResponse({
             Data: [
               {
@@ -183,7 +193,13 @@ describe("investment account runtime composition", () => {
       });
       expect(positionsResponse.statusCode).toBe(200);
       expect(positionsResponse.json()).toMatchObject([
-        { assetType: "Stock", amount: 2, exposureCurrency: "EUR" },
+        {
+          instrumentName: "Developer Example Company",
+          symbol: "DEVEX",
+          assetType: "Stock",
+          amount: 2,
+          exposureCurrency: "EUR",
+        },
       ]);
       expect(positionsResponse.body).not.toMatch(
         /test-developer-token|developer-position-id|Uic/,
@@ -215,6 +231,46 @@ describe("investment account runtime composition", () => {
       expect(response.body).not.toMatch(
         /test-developer-token|raw-saxo-error|response-token/,
       );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("keeps positions available when developer-token enrichment returns 404", async () => {
+    const runtime = composeInvestmentAccountRuntime(
+      { provider: "saxo-sim", developerAccessToken: "test-developer-token" },
+      {
+        accountFetch: async () => jsonResponse({ Data: [] }),
+        balanceFetch: async () =>
+          jsonResponse({ Currency: "DKK", CashBalance: 0, TotalValue: 0 }),
+        positionFetch: async (input) =>
+          input.toString().includes("/ref/v1/instruments/details/")
+            ? jsonResponse({ error: "not-found" }, 404)
+            : jsonResponse({
+                Data: [
+                  {
+                    PositionId: "private-position-id",
+                    PositionBase: { Amount: 1, AssetType: "Stock", Uic: 12345 },
+                    PositionView: {
+                      CurrentPrice: 10,
+                      Exposure: 10,
+                      ExposureCurrency: "DKK",
+                    },
+                  },
+                ],
+              }),
+      },
+    );
+    const app = buildServer(runtime);
+
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/investment-positions" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject([
+        { instrumentName: null, symbol: null, assetType: "Stock" },
+      ]);
+      expect(response.body).not.toMatch(/private-position-id|12345|not-found/);
     } finally {
       await app.close();
     }
@@ -253,10 +309,18 @@ describe("investment account runtime composition", () => {
         );
         return jsonResponse({ Currency: "DKK", CashBalance: 750, TotalValue: 1_500 });
       },
-      positionFetch: async (_input, init) => {
+      positionFetch: async (input, init) => {
         expect(new Headers(init?.headers).get("Authorization")).toBe(
           "Bearer test-access-token",
         );
+        if (input.toString().includes("/ref/v1/instruments/details/")) {
+          return jsonResponse({
+            Uic: 67890,
+            AssetType: "Bond",
+            Description: "OAuth Example Bond",
+            Symbol: "OAUTHX",
+          });
+        }
         return jsonResponse({
           Data: [
             {
@@ -319,7 +383,13 @@ describe("investment account runtime composition", () => {
       });
       expect(positionsResponse.statusCode).toBe(200);
       expect(positionsResponse.json()).toMatchObject([
-        { assetType: "Bond", amount: 3, exposureCurrency: "DKK" },
+        {
+          instrumentName: "OAuth Example Bond",
+          symbol: "OAUTHX",
+          assetType: "Bond",
+          amount: 3,
+          exposureCurrency: "DKK",
+        },
       ]);
       expect(positionsResponse.body).not.toMatch(
         /test-access-token|test-refresh-token|oauth-position-id|Uic/,

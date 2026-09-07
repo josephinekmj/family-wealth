@@ -134,8 +134,19 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
     try {
       const positions = await investmentPositionQueries.listInvestmentPositions();
       return positions.map(
-        ({ id, assetType, amount, currentPrice, exposure, exposureCurrency }) => ({
+        ({
           id,
+          instrumentName,
+          symbol,
+          assetType,
+          amount,
+          currentPrice,
+          exposure,
+          exposureCurrency,
+        }) => ({
+          id,
+          instrumentName,
+          symbol,
           assetType,
           amount,
           currentPrice,

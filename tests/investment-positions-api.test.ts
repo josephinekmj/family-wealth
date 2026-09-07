@@ -13,6 +13,8 @@ describe("GET /api/investment-positions", () => {
       expect(response.json()).toEqual([
         {
           id: "mock-position-1",
+          instrumentName: "Example Company",
+          symbol: "EXAMPLE",
           assetType: "Stock",
           amount: 10,
           currentPrice: 100,
@@ -25,11 +27,13 @@ describe("GET /api/investment-positions", () => {
     }
   });
 
-  it("returns only the six provider-neutral fields", async () => {
+  it("returns only the eight provider-neutral fields including nullable metadata", async () => {
     const investmentPositionGateway = {
       listPositions: async () => [
         {
           id: "opaque-position",
+          instrumentName: null,
+          symbol: null,
           assetType: "Stock",
           amount: 2,
           currentPrice: 50,
@@ -49,6 +53,8 @@ describe("GET /api/investment-positions", () => {
       expect(response.json()).toEqual([
         {
           id: "opaque-position",
+          instrumentName: null,
+          symbol: null,
           assetType: "Stock",
           amount: 2,
           currentPrice: 50,

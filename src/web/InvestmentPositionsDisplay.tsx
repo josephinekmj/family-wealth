@@ -25,7 +25,16 @@ export function InvestmentPositionsDisplay({ positions }: InvestmentPositionsDis
         <ul className="investment-position-list">
           {positions.map((position) => (
             <li key={position.id}>
-              <h4>{position.assetType}</h4>
+              {position.instrumentName && position.symbol ? (
+                <>
+                  <h4>{position.instrumentName}</h4>
+                  <p className="position-instrument-type">
+                    {position.symbol} · {position.assetType}
+                  </p>
+                </>
+              ) : (
+                <h4>{position.assetType}</h4>
+              )}
               <dl>
                 <div>
                   <dt>Amount</dt>

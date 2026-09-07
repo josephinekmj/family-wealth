@@ -10,6 +10,8 @@ describe("InvestmentPositionsDisplay", () => {
         positions: [
           {
             id: "opaque-position-id",
+            instrumentName: "Example Company",
+            symbol: "EXAMPLE",
             assetType: "Stock",
             amount: -2.5,
             currentPrice: 123.45,
@@ -21,6 +23,8 @@ describe("InvestmentPositionsDisplay", () => {
     );
 
     expect(markup).toContain("Positions");
+    expect(markup).toContain("Example Company");
+    expect(markup).toContain("EXAMPLE · Stock");
     expect(markup).toContain("Stock");
     expect(markup).toContain("-2.5");
     expect(markup).toContain("DKK 123.45");
@@ -34,5 +38,28 @@ describe("InvestmentPositionsDisplay", () => {
     );
 
     expect(markup).toContain("No investment positions");
+  });
+
+  it("falls back to asset type when instrument metadata is unavailable", () => {
+    const markup = renderToStaticMarkup(
+      createElement(InvestmentPositionsDisplay, {
+        positions: [
+          {
+            id: "opaque-position-id",
+            instrumentName: null,
+            symbol: null,
+            assetType: "Bond",
+            amount: 1,
+            currentPrice: 50,
+            exposure: 50,
+            exposureCurrency: "EUR",
+          },
+        ],
+      }),
+    );
+
+    expect(markup).toContain("Bond");
+    expect(markup).not.toContain("Unknown instrument");
+    expect(markup).not.toContain("opaque-position-id");
   });
 });

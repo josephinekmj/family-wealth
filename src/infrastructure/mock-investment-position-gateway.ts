@@ -10,6 +10,8 @@ export class MockInvestmentPositionGateway implements InvestmentPositionGateway 
     positions: InvestmentPositionSummary[] = [
       {
         id: "mock-position-1",
+        instrumentName: "Example Company",
+        symbol: "EXAMPLE",
         assetType: "Stock",
         amount: 10,
         currentPrice: 100,

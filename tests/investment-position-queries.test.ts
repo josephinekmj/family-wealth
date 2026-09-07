@@ -10,6 +10,8 @@ describe("investment position queries", () => {
     const positions: InvestmentPositionSummary[] = [
       {
         id: "position-1",
+        instrumentName: "Example Company",
+        symbol: "EXAMPLE",
         assetType: "Stock",
         amount: 10,
         currentPrice: 100,
