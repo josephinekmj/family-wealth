@@ -6,7 +6,7 @@ Phase 5 - Mock investment integration
 
 ## Current increment
 
-Expose mock investment accounts through read-only HTTP API.
+Display read-only mock investment accounts in React.
 
 ## Completed
 
@@ -69,11 +69,15 @@ Expose mock investment accounts through read-only HTTP API.
 - Composed a generic default mock for investment accounts while retaining SQLite for savings goals.
 - Added API tests for default/injected/empty gateways, public fields, and absent investment-account write routes.
 - Verified local HTTP 200 responses for investment accounts, health, and savings goals.
-- Validation gates pass: 107 tests, typecheck, lint, and build.
+- Added a frontend investment-account API client using the existing provider-neutral summary contract.
+- Added independent account loading, error, and empty states in a focused React section.
+- Added read-only account names/currencies with a Demo data label, completing the React-to-mock-adapter vertical slice.
+- Verified account rendering states and savings create/edit/projection regression in Chrome.
+- Validation gates pass: 111 tests, typecheck, lint, and build.
 
 ## Next
 
-- Display the read-only mock investment accounts in the existing React UI.
+- Introduce a Saxo SIM configuration/authentication boundary while retaining the Mock adapter as the default and without any LIVE capability.
 
 ## Known issues
 
@@ -82,7 +86,7 @@ Expose mock investment accounts through read-only HTTP API.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
 - Investment accounts use mock data only; no Saxo SIM, network integration, or OAuth.
-- No investment account UI.
+- No real account balances or positions.
 - No financial execution capability.
 
 ## Architecture decisions

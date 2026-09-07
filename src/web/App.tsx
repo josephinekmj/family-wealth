@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SavingsGoalRecord } from "../application/savings-goal-contracts.js";
 import { SavingsGoalForm } from "./SavingsGoalForm.js";
+import { InvestmentAccountsSection } from "./InvestmentAccountsSection.js";
 import {
   createSavingsGoal,
   fetchSavingsGoals,
@@ -207,6 +208,7 @@ export default function App() {
           </div>
         )}
         {renderContent()}
+        <InvestmentAccountsSection />
       </section>
     </main>
   );
