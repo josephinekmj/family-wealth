@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Read-only Saxo SIM investment-account adapter.
+Explicit Saxo SIM runtime account-gateway composition.
 
 ## Completed
 
@@ -99,11 +99,15 @@ Read-only Saxo SIM investment-account adapter.
 - Added Bearer-authenticated read-only SIM account discovery through GET /port/v1/accounts/me.
 - Added fail-closed mapping from private Saxo response fields to id, name, and currency only.
 - Added stable opaque account IDs derived from AccountKey without exposing the provider identifier.
-- Validation gates pass: 184 tests, typecheck, lint, and build.
+- Added explicit mock/SIM investment-account gateway selection in the composition root.
+- Shared one SaxoSimAccessTokenProvider between OAuth code exchange and account discovery.
+- Added the complete OAuth-to-read-only-account runtime path with fake transport coverage.
+- Added a generic HTTP 503 response when investment accounts are unavailable.
+- Validation gates pass: 188 tests, typecheck, lint, and build.
 
 ## Next
 
-- Allow explicit SAXO_MODE=saxo-sim runtime composition to select SaxoInvestmentAccountGateway after successful OAuth, while keeping Mock as the default and preserving read-only behavior.
+- Add minimal read-only investment connection status to the API and UI so React shows Demo data in mock mode and Saxo SIM only when authenticated.
 
 ## Known issues
 
@@ -111,10 +115,11 @@ Read-only Saxo SIM investment-account adapter.
 - Backup is manual and requires stopping the backend.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
-- Investment accounts use mock data at runtime; the isolated Saxo adapter is not selected by composition.
+- Mock remains the default runtime; Saxo SIM selection requires explicit configuration and manual OAuth.
 - Access and optional refresh tokens are process-local and disappear on restart.
 - Refresh occurs only on demand through getAccessToken; there are no timers or background jobs.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
+- React still labels investment accounts as Demo data regardless of configured provider.
 - No balances, positions, ASK detection, or other Saxo OpenAPI resources are implemented.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.

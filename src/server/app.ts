@@ -82,9 +82,13 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
     return goals.map(mapSavingsGoalProfileToRecord);
   });
 
-  app.get("/api/investment-accounts", async () => {
-    const accounts = await investmentAccountQueries.listInvestmentAccounts();
-    return accounts.map(({ id, name, currency }) => ({ id, name, currency }));
+  app.get("/api/investment-accounts", async (_request, reply) => {
+    try {
+      const accounts = await investmentAccountQueries.listInvestmentAccounts();
+      return accounts.map(({ id, name, currency }) => ({ id, name, currency }));
+    } catch {
+      return reply.status(503).send({ error: "Investment accounts are not available" });
+    }
   });
 
   if (dependencies.saxoOAuth) {

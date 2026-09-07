@@ -52,6 +52,25 @@ describe("GET /api/investment-accounts", () => {
     }
   });
 
+  it("returns a generic service-unavailable response when the gateway fails", async () => {
+    const investmentAccountGateway: InvestmentAccountGateway = {
+      listAccounts: async () => {
+        throw new Error("sensitive-token-and-provider-detail");
+      },
+    };
+    const app = buildServer({ investmentAccountGateway });
+
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/investment-accounts" });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({ error: "Investment accounts are not available" });
+      expect(response.body).not.toContain("sensitive-token-and-provider-detail");
+    } finally {
+      await app.close();
+    }
+  });
+
   it.each(["POST", "PUT", "PATCH", "DELETE"] as const)("does not expose %s", async (method) => {
     const app = buildServer();
 
