@@ -4,7 +4,10 @@ import type {
   SaxoOAuthStateStore,
   SaxoSimConfiguration,
 } from "../src/saxo/index.js";
-import { InMemorySaxoOAuthStateStore } from "../src/saxo/index.js";
+import {
+  InMemorySaxoOAuthStateStore,
+  SaxoSimAccessTokenProvider,
+} from "../src/saxo/index.js";
 import { buildServer } from "../src/server/app.js";
 
 const configuration: SaxoSimConfiguration = {
@@ -84,6 +87,48 @@ describe("Saxo SIM OAuth routes", () => {
       expect(response.body).not.toContain("test-code");
       expect(response.body).not.toContain("valid-state");
       expect(receive).toHaveBeenCalledExactlyOnceWith("test-code");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("exchanges a valid callback code and returns no token details", async () => {
+    const stateStore = new InMemorySaxoOAuthStateStore();
+    stateStore.save("exchange-state");
+    const fetchRequest = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          access_token: "test-access-token",
+          token_type: "Bearer",
+          expires_in: 900,
+          refresh_token: "test-refresh-token",
+          refresh_token_expires_in: 3600,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const tokenProvider = new SaxoSimAccessTokenProvider(configuration, fetchRequest);
+    const app = buildServer({
+      saxoOAuth: {
+        configuration,
+        stateStore,
+        authorizationCodeReceiver: tokenProvider,
+      },
+    });
+
+    try {
+      const response = await app.inject({
+        method: "GET",
+        url: "/auth/saxo/callback?code=test-code&state=exchange-state",
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ status: "Saxo authorization code received" });
+      expect(response.body).not.toMatch(/test-code|exchange-state|test-access-token|test-refresh-token/);
+      expect(fetchRequest).toHaveBeenCalledOnce();
+      await expect(tokenProvider.getAccessToken()).resolves.toMatchObject({
+        value: "test-access-token",
+      });
     } finally {
       await app.close();
     }
@@ -241,16 +286,21 @@ describe("Saxo SIM OAuth routes", () => {
     }
   });
 
-  it("returns a generic error if code capture fails", async () => {
+  it("returns a generic error if token exchange fails", async () => {
     const stateStore = new InMemorySaxoOAuthStateStore();
     stateStore.save("receiver-error-state");
-    const receiver: SaxoAuthorizationCodeReceiver = {
-      receive: vi.fn(async () => {
-        throw new Error("internal receiver detail");
-      }),
-    };
+    const fetchRequest = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ error: "raw-saxo-error", token: "response-token" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const tokenProvider = new SaxoSimAccessTokenProvider(
+      configuration,
+      fetchRequest,
+    );
     const app = buildServer({
-      saxoOAuth: { configuration, stateStore, authorizationCodeReceiver: receiver },
+      saxoOAuth: { configuration, stateStore, authorizationCodeReceiver: tokenProvider },
     });
 
     try {
@@ -258,12 +308,18 @@ describe("Saxo SIM OAuth routes", () => {
         method: "GET",
         url: "/auth/saxo/callback?code=sensitive-code&state=receiver-error-state",
       });
+      const replayResponse = await app.inject({
+        method: "GET",
+        url: "/auth/saxo/callback?code=different-code&state=receiver-error-state",
+      });
 
       expect(response.statusCode).toBe(500);
       expect(response.json()).toEqual({ error: "Unable to complete Saxo authorization" });
       expect(response.body).not.toContain("sensitive-code");
       expect(response.body).not.toContain("receiver-error-state");
-      expect(response.body).not.toContain("internal receiver detail");
+      expect(response.body).not.toMatch(/raw-saxo-error|response-token|test-client-secret/);
+      expect(replayResponse.statusCode).toBe(400);
+      expect(fetchRequest).toHaveBeenCalledOnce();
     } finally {
       await app.close();
     }

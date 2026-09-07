@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Saxo SIM OAuth start and callback boundary.
+Saxo SIM authorization-code token exchange.
 
 ## Completed
 
@@ -86,11 +86,16 @@ Saxo SIM OAuth start and callback boundary.
 - Added backend-only, in-memory authorization-code capture without token exchange.
 - Added generic authorization denial and callback failure responses that do not expose sensitive values.
 - Added optional local .env loading through the Node 22 runtime without adding a dependency.
-- Validation gates pass: 147 tests, typecheck, lint, and build.
+- Added Saxo SIM authorization-code exchange against the fixed SIM token endpoint.
+- Added backend-only HTTP Basic client authentication and form-encoded token requests.
+- Added strict token response validation with memory-only access and optional refresh-token state.
+- Added a concrete SaxoAccessTokenProvider with deterministic access-token expiry handling.
+- Wired the callback receiver to token exchange without changing the mock investment account gateway.
+- Validation gates pass: 161 tests, typecheck, lint, and build.
 
 ## Next
 
-- Implement Saxo SIM authorization-code to access/refresh-token exchange behind SaxoAccessTokenProvider, keeping tokens memory-only and making no investment-account API calls.
+- Implement memory-only Saxo SIM refresh-token rotation behind SaxoAccessTokenProvider, still without calling investment-account endpoints.
 
 ## Known issues
 
@@ -99,8 +104,9 @@ Saxo SIM OAuth start and callback boundary.
 - No automatic or off-device backup yet.
 - No external brokerage integration.
 - Investment accounts use mock data only; Saxo SIM OAuth does not select an account gateway.
-- Authorization codes are not exchanged; no access or refresh tokens exist.
-- OAuth state and authorization-code storage are process-local, ephemeral, and suitable only for the current single-process local application.
+- Access and optional refresh tokens are process-local and disappear on restart.
+- Refresh-token exchange and automatic refresh are not implemented.
+- OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
 - No Saxo OpenAPI account calls exist.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.
@@ -115,7 +121,7 @@ Saxo SIM OAuth start and callback boundary.
 - Keep combined savings requirements derived from existing projections and never persist them.
 - Keep investment account queries provider-neutral behind InvestmentAccountGateway, with adapters in infrastructure.
 - Keep Saxo authentication behind SaxoAccessTokenProvider and expose SIM endpoints only.
-- Keep OAuth state and authorization codes in memory for the current single-user, single-process local runtime.
+- Keep OAuth state and tokens in memory for the current single-user, single-process local runtime.
 
 ## Security decisions
 

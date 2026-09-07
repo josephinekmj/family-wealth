@@ -4,8 +4,8 @@ import { buildServer } from "./app.js";
 import { DEMO_SAVINGS_GOALS } from "./demo-savings-goals.js";
 import { SQLiteSavingsGoalRepository } from "../infrastructure/sqlite-savings-goal-repository.js";
 import {
-  InMemorySaxoAuthorizationCodeReceiver,
   InMemorySaxoOAuthStateStore,
+  SaxoSimAccessTokenProvider,
   loadInvestmentAccountProviderConfiguration,
 } from "../saxo/index.js";
 
@@ -31,7 +31,9 @@ const app = buildServer({
         saxoOAuth: {
           configuration: investmentAccountProviderConfiguration,
           stateStore: new InMemorySaxoOAuthStateStore(),
-          authorizationCodeReceiver: new InMemorySaxoAuthorizationCodeReceiver(),
+          authorizationCodeReceiver: new SaxoSimAccessTokenProvider(
+            investmentAccountProviderConfiguration,
+          ),
         },
       }
     : {}),

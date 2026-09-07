@@ -25,6 +25,131 @@ export interface SaxoAccessTokenProvider {
 	getAccessToken(): Promise<SaxoAccessToken>;
 }
 
+type SaxoFetch = (
+	input: string | URL,
+	init?: RequestInit,
+) => Promise<Response>;
+
+type SaxoTokenState = {
+	accessToken: string;
+	accessTokenExpiresAt: number;
+	refreshToken?: string;
+	refreshTokenExpiresAt?: number;
+};
+
+const tokenExchangeError = (): Error => new Error("Saxo SIM token exchange failed");
+
+export class SaxoSimAccessTokenProvider
+	implements SaxoAccessTokenProvider, SaxoAuthorizationCodeReceiver
+{
+	private tokenState: SaxoTokenState | undefined;
+
+	constructor(
+		private readonly configuration: SaxoSimConfiguration,
+		private readonly fetchRequest: SaxoFetch = globalThis.fetch,
+		private readonly now: () => number = Date.now,
+	) {}
+
+	async receive(code: string): Promise<void> {
+		if (!code.trim()) {
+			throw tokenExchangeError();
+		}
+
+		try {
+			const response = await this.fetchRequest(SAXO_SIM_TOKEN_URL, {
+				method: "POST",
+				headers: {
+					Authorization: `Basic ${Buffer.from(
+						`${this.configuration.clientId}:${this.configuration.clientSecret}`,
+						"utf8",
+					).toString("base64")}`,
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				body: new URLSearchParams({
+					grant_type: "authorization_code",
+					code,
+					redirect_uri: this.configuration.redirectUri,
+				}),
+			});
+
+			if (!response.ok) {
+				throw tokenExchangeError();
+			}
+
+			const tokenResponse: unknown = await response.json();
+			this.tokenState = this.parseTokenResponse(tokenResponse);
+		} catch {
+			throw tokenExchangeError();
+		}
+	}
+
+	async getAccessToken(): Promise<SaxoAccessToken> {
+		if (!this.tokenState || this.tokenState.accessTokenExpiresAt <= this.now()) {
+			throw new Error("Saxo access token is unavailable");
+		}
+
+		return {
+			value: this.tokenState.accessToken,
+			expiresAt: new Date(this.tokenState.accessTokenExpiresAt),
+		};
+	}
+
+	private parseTokenResponse(value: unknown): SaxoTokenState {
+		if (typeof value !== "object" || value === null) {
+			throw tokenExchangeError();
+		}
+
+		const response = value as Record<string, unknown>;
+		const accessToken = response.access_token;
+		const tokenType = response.token_type;
+		const expiresIn = response.expires_in;
+		const refreshToken = response.refresh_token;
+		const refreshTokenExpiresIn = response.refresh_token_expires_in;
+
+		if (
+			typeof accessToken !== "string" ||
+			!accessToken.trim() ||
+			typeof tokenType !== "string" ||
+			tokenType.trim().toLowerCase() !== "bearer" ||
+			typeof expiresIn !== "number" ||
+			!Number.isFinite(expiresIn) ||
+			expiresIn <= 0
+		) {
+			throw tokenExchangeError();
+		}
+
+		if (
+			refreshToken !== undefined &&
+			(typeof refreshToken !== "string" || !refreshToken.trim())
+		) {
+			throw tokenExchangeError();
+		}
+
+		if (
+			refreshTokenExpiresIn !== undefined &&
+			(typeof refreshTokenExpiresIn !== "number" ||
+				!Number.isFinite(refreshTokenExpiresIn) ||
+				refreshTokenExpiresIn <= 0)
+		) {
+			throw tokenExchangeError();
+		}
+
+		if (refreshTokenExpiresIn !== undefined && refreshToken === undefined) {
+			throw tokenExchangeError();
+		}
+
+		const now = this.now();
+		return {
+			accessToken,
+			accessTokenExpiresAt: now + expiresIn * 1000,
+			...(refreshToken === undefined ? {} : { refreshToken }),
+			...(refreshTokenExpiresIn === undefined
+				? {}
+				: { refreshTokenExpiresAt: now + refreshTokenExpiresIn * 1000 }),
+		};
+	}
+}
+
 export interface SaxoOAuthStateStore {
 	save(state: string): void;
 	consume(state: string): boolean;
