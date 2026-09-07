@@ -245,3 +245,49 @@ button.secondary {
 .investment-account-list p {
   margin: 0;
 }
+
+.investment-positions {
+  margin-top: 1.5rem;
+}
+
+.investment-positions h3,
+.investment-position-list h4 {
+  margin: 0 0 0.5rem;
+}
+
+.investment-position-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.investment-position-list li {
+  padding: 1rem;
+  border-left: 3px solid #0f766e;
+  background: #f0fdfa;
+}
+
+.investment-position-list dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.investment-position-list dt {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.investment-position-list dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .investment-position-list dl {
+    grid-template-columns: 1fr;
+  }
+}

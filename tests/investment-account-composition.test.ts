@@ -48,6 +48,21 @@ describe("investment account runtime composition", () => {
         cashBalance: 50_000,
         totalValue: 100_000,
       });
+      const positionsResponse = await app.inject({
+        method: "GET",
+        url: "/api/investment-positions",
+      });
+      expect(positionsResponse.statusCode).toBe(200);
+      expect(positionsResponse.json()).toEqual([
+        {
+          id: "mock-position-1",
+          assetType: "Stock",
+          amount: 10,
+          currentPrice: 100,
+          exposure: 1_000,
+          exposureCurrency: "DKK",
+        },
+      ]);
     } finally {
       await app.close();
     }
@@ -107,6 +122,20 @@ describe("investment account runtime composition", () => {
           );
           return jsonResponse({ Currency: "EUR", CashBalance: 500, TotalValue: 1_000 });
         },
+        positionFetch: async (_input, init) => {
+          expect(new Headers(init?.headers).get("Authorization")).toBe(
+            "Bearer test-developer-token",
+          );
+          return jsonResponse({
+            Data: [
+              {
+                PositionId: "developer-position-id",
+                PositionBase: { Amount: 2, AssetType: "Stock", Uic: 12345 },
+                PositionView: { CurrentPrice: 50, Exposure: 100, ExposureCurrency: "EUR" },
+              },
+            ],
+          });
+        },
       },
     );
     const app = buildServer(runtime);
@@ -148,6 +177,17 @@ describe("investment account runtime composition", () => {
         cashBalance: 500,
         totalValue: 1_000,
       });
+      const positionsResponse = await app.inject({
+        method: "GET",
+        url: "/api/investment-positions",
+      });
+      expect(positionsResponse.statusCode).toBe(200);
+      expect(positionsResponse.json()).toMatchObject([
+        { assetType: "Stock", amount: 2, exposureCurrency: "EUR" },
+      ]);
+      expect(positionsResponse.body).not.toMatch(
+        /test-developer-token|developer-position-id|Uic/,
+      );
       expect(accountFetch).toHaveBeenCalledOnce();
       expect(new Headers(accountFetch.mock.calls[0]![1]?.headers).get("Authorization")).toBe(
         "Bearer test-developer-token",
@@ -213,6 +253,20 @@ describe("investment account runtime composition", () => {
         );
         return jsonResponse({ Currency: "DKK", CashBalance: 750, TotalValue: 1_500 });
       },
+      positionFetch: async (_input, init) => {
+        expect(new Headers(init?.headers).get("Authorization")).toBe(
+          "Bearer test-access-token",
+        );
+        return jsonResponse({
+          Data: [
+            {
+              PositionId: "oauth-position-id",
+              PositionBase: { Amount: 3, AssetType: "Bond", Uic: 67890 },
+              PositionView: { CurrentPrice: 75, Exposure: 225, ExposureCurrency: "DKK" },
+            },
+          ],
+        });
+      },
       generateState: () => "shared-state",
     });
     const app = buildServer(runtime);
@@ -259,6 +313,17 @@ describe("investment account runtime composition", () => {
         cashBalance: 750,
         totalValue: 1_500,
       });
+      const positionsResponse = await app.inject({
+        method: "GET",
+        url: "/api/investment-positions",
+      });
+      expect(positionsResponse.statusCode).toBe(200);
+      expect(positionsResponse.json()).toMatchObject([
+        { assetType: "Bond", amount: 3, exposureCurrency: "DKK" },
+      ]);
+      expect(positionsResponse.body).not.toMatch(
+        /test-access-token|test-refresh-token|oauth-position-id|Uic/,
+      );
     } finally {
       await app.close();
     }
@@ -277,6 +342,26 @@ describe("investment account runtime composition", () => {
 
       expect(response.statusCode).toBe(503);
       expect(response.json()).toEqual({ error: "Investment balance is not available" });
+      expect(response.body).not.toMatch(/token|secret|authentication/i);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns a safe positions failure before OAuth authentication", async () => {
+    const runtime = composeInvestmentAccountRuntime(simConfiguration, {
+      tokenFetch: async () => jsonResponse({}),
+      accountFetch: async () => jsonResponse({ Data: [] }),
+      balanceFetch: async () => jsonResponse({ Currency: "DKK", CashBalance: 0, TotalValue: 0 }),
+      positionFetch: async () => jsonResponse({ Data: [] }),
+    });
+    const app = buildServer(runtime);
+
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/investment-positions" });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({ error: "Investment positions are not available" });
       expect(response.body).not.toMatch(/token|secret|authentication/i);
     } finally {
       await app.close();

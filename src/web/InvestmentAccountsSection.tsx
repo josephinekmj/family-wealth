@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import type { InvestmentAccountSummary } from "../application/investment-account-contracts.js";
 import type { InvestmentBalanceSummary } from "../application/investment-balance-contracts.js";
+import type { InvestmentPositionSummary } from "../application/investment-position-contracts.js";
 import { InvestmentBalanceDisplay } from "./InvestmentBalanceDisplay.js";
 import { InvestmentConnectionLabel } from "./InvestmentConnectionLabel.js";
+import { InvestmentPositionsDisplay } from "./InvestmentPositionsDisplay.js";
 import {
   fetchInvestmentAccounts,
   fetchInvestmentBalance,
   fetchInvestmentConnectionStatus,
   type InvestmentConnectionStatus,
 } from "./client/investment-accounts.js";
+import { fetchInvestmentPositions } from "./client/investment-positions.js";
 
 type ViewState =
   | { status: "loading" }
@@ -20,9 +23,15 @@ type BalanceState =
   | { status: "error" }
   | { status: "success"; balance: InvestmentBalanceSummary };
 
+type PositionsState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "success"; positions: InvestmentPositionSummary[] };
+
 export function InvestmentAccountsSection() {
   const [viewState, setViewState] = useState<ViewState>({ status: "loading" });
   const [balanceState, setBalanceState] = useState<BalanceState>({ status: "loading" });
+  const [positionsState, setPositionsState] = useState<PositionsState>({ status: "loading" });
   const [connectionStatus, setConnectionStatus] = useState<InvestmentConnectionStatus | null>(null);
 
   useEffect(() => {
@@ -64,6 +73,18 @@ export function InvestmentAccountsSection() {
         }
       });
 
+    void fetchInvestmentPositions()
+      .then((positions) => {
+        if (isActive) {
+          setPositionsState({ status: "success", positions });
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setPositionsState({ status: "error" });
+        }
+      });
+
     return () => {
       isActive = false;
     };
@@ -95,6 +116,11 @@ export function InvestmentAccountsSection() {
             ))}
           </ul>
         ))}
+      {positionsState.status === "loading" && <p>Loading positions...</p>}
+      {positionsState.status === "error" && <p>Positions unavailable</p>}
+      {positionsState.status === "success" && (
+        <InvestmentPositionsDisplay positions={positionsState.positions} />
+      )}
     </section>
   );
 }

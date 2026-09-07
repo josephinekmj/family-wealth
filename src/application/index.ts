@@ -7,3 +7,5 @@ export * from "./investment-account-contracts.js";
 export * from "./investment-account-queries.js";
 export * from "./investment-balance-contracts.js";
 export * from "./investment-balance-queries.js";
+export * from "./investment-position-contracts.js";
+export * from "./investment-position-queries.js";

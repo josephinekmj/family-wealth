@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import {
   createInvestmentAccountQueries,
   createInvestmentBalanceQueries,
+  createInvestmentPositionQueries,
   createSavingsGoalCommands,
   createSavingsGoalQueries,
   InMemorySavingsGoalRepository,
@@ -9,11 +10,13 @@ import {
   mapSavingsGoalProfileToRecord,
   type InvestmentAccountGateway,
   type InvestmentBalanceGateway,
+  type InvestmentPositionGateway,
   type SavingsGoalRecord,
   type SavingsGoalRepository,
 } from "../application/index.js";
 import { MockInvestmentAccountGateway } from "../infrastructure/mock-investment-account-gateway.js";
 import { MockInvestmentBalanceGateway } from "../infrastructure/mock-investment-balance-gateway.js";
+import { MockInvestmentPositionGateway } from "../infrastructure/mock-investment-position-gateway.js";
 import {
   buildSaxoSimAuthorizationUrl,
   generateSaxoOAuthState,
@@ -53,6 +56,7 @@ export type BuildServerDependencies = {
   savingsGoalRepository?: SavingsGoalRepository;
   investmentAccountGateway?: InvestmentAccountGateway;
   investmentBalanceGateway?: InvestmentBalanceGateway;
+  investmentPositionGateway?: InvestmentPositionGateway;
   getInvestmentConnectionStatus?: () => InvestmentConnectionStatus;
   saxoOAuth?: {
     configuration: SaxoSimConfiguration;
@@ -84,6 +88,9 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
   const investmentAccountQueries = createInvestmentAccountQueries(investmentAccountGateway);
   const investmentBalanceQueries = createInvestmentBalanceQueries(
     dependencies.investmentBalanceGateway ?? new MockInvestmentBalanceGateway(),
+  );
+  const investmentPositionQueries = createInvestmentPositionQueries(
+    dependencies.investmentPositionGateway ?? new MockInvestmentPositionGateway(),
   );
 
   app.get("/health", async () => {
@@ -120,6 +127,24 @@ export function buildServer(dependencies: BuildServerDependencies = {}) {
       return { currency, cashBalance, totalValue };
     } catch {
       return reply.status(503).send({ error: "Investment balance is not available" });
+    }
+  });
+
+  app.get("/api/investment-positions", async (_request, reply) => {
+    try {
+      const positions = await investmentPositionQueries.listInvestmentPositions();
+      return positions.map(
+        ({ id, assetType, amount, currentPrice, exposure, exposureCurrency }) => ({
+          id,
+          assetType,
+          amount,
+          currentPrice,
+          exposure,
+          exposureCurrency,
+        }),
+      );
+    } catch {
+      return reply.status(503).send({ error: "Investment positions are not available" });
     }
   });
 

@@ -6,7 +6,7 @@ Phase 6 - Saxo SIM read-only
 
 ## Current increment
 
-Read-only Saxo SIM portfolio balance.
+Read-only Saxo SIM investment positions.
 
 ## Completed
 
@@ -116,11 +116,16 @@ Read-only Saxo SIM portfolio balance.
 - Shared existing developer/OAuth token providers across account and balance gateways.
 - Added GET /api/investment-balance with three-field success and generic 503 responses.
 - Added independently loaded Total value and Cash balance to the React investment section.
-- Validation gates pass: 243 tests, typecheck, lint, and build.
+- Added a provider-neutral investment positions contract and application query.
+- Added read-only Saxo SIM GET /port/v1/positions/me with same-origin pagination safeguards.
+- Added opaque position IDs, fail-closed mapping, and deterministic mock positions.
+- Shared existing developer/OAuth token providers across account, balance, and positions gateways.
+- Added GET /api/investment-positions and an independently loaded minimal positions UI.
+- Validation gates pass: 287 tests, typecheck, lint, and build.
 
 ## Next
 
-- Add isolated read-only Saxo SIM positions behind a provider-neutral investment positions boundary.
+- Add isolated read-only Saxo instrument-reference lookup so positions can map Uic and AssetType to a user-friendly symbol/name without exposing provider identifiers.
 
 ## Known issues
 
@@ -135,7 +140,8 @@ Read-only Saxo SIM portfolio balance.
 - OAuth state and token storage are process-local, ephemeral, and suitable only for the current single-process local application.
 - Connection status reports only provider source and connected state; it exposes no authentication details.
 - Balance is client/portfolio level rather than per-account and exposes only TotalValue and CashBalance.
-- No positions, ASK detection, or other Saxo OpenAPI resources are implemented.
+- Positions expose asset type and numeric values only; there are no instrument names, tickers, or per-account filtering.
+- No ASK detection or other Saxo OpenAPI resources are implemented.
 - No Saxo LIVE configuration or integration exists.
 - No real account balances or positions.
 - No financial execution capability.

@@ -1,7 +1,9 @@
 import type { InvestmentAccountGateway } from "../application/investment-account-contracts.js";
 import type { InvestmentBalanceGateway } from "../application/investment-balance-contracts.js";
+import type { InvestmentPositionGateway } from "../application/investment-position-contracts.js";
 import { MockInvestmentAccountGateway } from "../infrastructure/mock-investment-account-gateway.js";
 import { MockInvestmentBalanceGateway } from "../infrastructure/mock-investment-balance-gateway.js";
+import { MockInvestmentPositionGateway } from "../infrastructure/mock-investment-position-gateway.js";
 import type { InvestmentConnectionStatus } from "./app.js";
 import {
   InMemorySaxoOAuthStateStore,
@@ -14,12 +16,14 @@ import {
 } from "../saxo/index.js";
 import { SaxoInvestmentAccountGateway } from "../saxo/saxo-investment-account-gateway.js";
 import { SaxoInvestmentBalanceGateway } from "../saxo/saxo-investment-balance-gateway.js";
+import { SaxoInvestmentPositionGateway } from "../saxo/saxo-investment-position-gateway.js";
 
 type SaxoFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
 export type InvestmentAccountRuntime = {
   investmentAccountGateway: InvestmentAccountGateway;
   investmentBalanceGateway: InvestmentBalanceGateway;
+  investmentPositionGateway: InvestmentPositionGateway;
   getInvestmentConnectionStatus: () => InvestmentConnectionStatus;
   saxoOAuth?: {
     configuration: SaxoSimConfiguration;
@@ -33,6 +37,7 @@ type InvestmentAccountCompositionOverrides = {
   tokenFetch?: SaxoFetch;
   accountFetch?: SaxoFetch;
   balanceFetch?: SaxoFetch;
+  positionFetch?: SaxoFetch;
   stateStore?: SaxoOAuthStateStore;
   generateState?: () => string;
 };
@@ -47,6 +52,7 @@ export const composeInvestmentAccountRuntime = (
         { id: "mock-account-1", name: "Investment account", currency: "DKK" },
       ]),
       investmentBalanceGateway: new MockInvestmentBalanceGateway(),
+      investmentPositionGateway: new MockInvestmentPositionGateway(),
       getInvestmentConnectionStatus: () => ({ source: "mock", status: "connected" }),
     };
   }
@@ -63,6 +69,10 @@ export const composeInvestmentAccountRuntime = (
       investmentBalanceGateway: new SaxoInvestmentBalanceGateway(
         tokenProvider,
         overrides.balanceFetch ?? globalThis.fetch,
+      ),
+      investmentPositionGateway: new SaxoInvestmentPositionGateway(
+        tokenProvider,
+        overrides.positionFetch ?? globalThis.fetch,
       ),
       getInvestmentConnectionStatus: () => ({ source: "saxo-sim", status: "connected" }),
     };
@@ -81,6 +91,10 @@ export const composeInvestmentAccountRuntime = (
     investmentBalanceGateway: new SaxoInvestmentBalanceGateway(
       tokenProvider,
       overrides.balanceFetch ?? globalThis.fetch,
+    ),
+    investmentPositionGateway: new SaxoInvestmentPositionGateway(
+      tokenProvider,
+      overrides.positionFetch ?? globalThis.fetch,
     ),
     getInvestmentConnectionStatus: () => ({
       source: "saxo-sim",
